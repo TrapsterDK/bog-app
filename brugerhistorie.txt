@@ -1,0 +1,31 @@
+Brugerhistorie 1: vis søg
+Pre: Programmets hovedvindue er åbnet
+Brugeren har mulighed for at søge efter en bog i tabllen ud fra alt, som opdatere efter hvert tryk
+Brugeren har mulighed for at vælge en bog og trykke enten sælg, info eller tilføj bog
+
+Brugerhistorie 2:
+pre Brugeren har trykket salg med en bog selected
+Brugen får en bekræftelse med bog information og kan anullere eller bekræfte
+Post: Butikkens saldo er blevet opdateret med beløbet der blev solgt for
+og antallet af bøger på lager er blevet opdateret. Programmets hovedvindue vises.
+
+Brugerhistorie 3:
+pre Brugeren har trykket info med en bog selected
+Brugeren får et popup hvor info omkring bogen bliver displayed
+Brugeren har herfra mulighed for at redigere eller gå tilbage til hovedvindue
+
+Brugerhistorie 4:
+pre Brugeren er i info
+Brugeren kan vælge at redfigere som gør felterne softbare
+Brugeren kan vælge at gemme eller anullere
+
+Brugerhistorie 5:
+pre Brugeren har insæt rediger med en bog selected
+Brugeren får et pop ligenede info hvor information felterne er tomme og felterne er softbare
+Brugeren har mulighed for at insætte eller anullere
+
+Brugerhistorie 6:
+pre Brugeren har trykket redigere i programmets hovedvindue med en bog selected
+dette leder til samme interface som Brugerhistorie 4
+
+
