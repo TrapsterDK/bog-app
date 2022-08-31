@@ -1,3 +1,1 @@
-syyyyy
-
-fthfgygjjj
+import sqlite3
