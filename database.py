@@ -9,6 +9,15 @@ class Book:
     stock: int
     author: list
     genre: list
+    id: int = None
+
+    
+@dataclass
+class Book_Search_Query:
+    titel: str = None
+    author: list = None
+    genre: list = None
+    id: int = None
 
 class Database(object):
     def __init__(self, filename="database.db"):
@@ -33,11 +42,22 @@ class Database(object):
 
         
     @staticmethod
-    def _price_to_decimal(price):
-        return decimal.Decimal(price) / decimal.Decimal(100)
+    def _int_to_decimal(integer):
+        return decimal.Decimal(integer) / decimal.Decimal(100)
 
+    @staticmethod
+    def _decimal_to_int(dec):
+        return int(decimal.Decimal(dec) * decimal.Decimal(100))
 
     def create_table(self):
+        #transactions
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS transactions
+        (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date INTEGER NOT NULL,
+            book_id INTEGER NOT NULL
+        );""")
+
         #books
         self.cur.execute("""CREATE TABLE IF NOT EXISTS books
         (
@@ -82,8 +102,14 @@ class Database(object):
     def add_book(self, book: Book):
         pass
 
-    def get_book(self, book: Book):
+    def get_book(self, id: int):
         pass
     
-    def get_books(self, ):
+    def get_books(self, query: Book_Search_Query):
+        pass
+
+    def edit_book(self, id: int, book_new_info: Book):
+        pass
+
+    def sell_book(self, id: int):
         pass
