@@ -1,0 +1,33 @@
+<html>
+  <body>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+      <div class="mermaid">
+    
+        classDiagram
+          class Book {
+            authors : list
+            genres : list
+            id : Optional[int]
+            price
+            stock : int
+            titel : str
+          }
+          class Book_Search_Query {
+            author : Optional[list]
+            genre : Optional[list]
+            id : Optional[int]
+            titel : Optional[str]
+          }
+          class Database {
+            con
+            cur
+            add_book(book: Book) Book
+            edit_book(id: int, book_new_info: Book) None
+            get_book(id: int) Book
+            get_books(query: Book_Search_Query) list[Book]
+            sell_book(id: int) None
+          }
+  
+       </div>
+  </body>
+</html>
