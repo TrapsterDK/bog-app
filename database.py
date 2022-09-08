@@ -87,7 +87,7 @@ class Database(object):
             quantity INTEGER NOT NULL,
             price INTEGER NOT NULL,
             book_id INTEGER,
-              KEY (book_id)
+            FOREIGN KEY (book_id)
                 REFERENCES books (id)
                 ON UPDATE CASCADE
                 ON DELETE SET NULL
