@@ -156,7 +156,7 @@ class Database(object):
     def add_books(self, books: list[Book]) -> None:
         for book in books:
             #insert book
-            self.cur.execute("""INSERT INTO books(title, price, stock) VALUES(?, ?, ?)""", (book.title, book.price, book.stock, ))
+            self.cur.execute("""INSERT INTO books(title, price, stock) VALUES(?, ?, ?)""", (book.title, self._decimal_to_int(book.price), book.stock, ))
             book_id = self.cur.lastrowid
 
             #insert new genres and authors
@@ -209,7 +209,7 @@ class Database(object):
 
         #update book info
         self.cur.execute("""UPDATE books SET title = (?), price = (?), stock = (?) WHERE id = (?)""", 
-        (book_new_info.title, book_new_info.price, book_new_info.stock, book_id, ))
+        (book_new_info.title, self._decimal_to_int(book_new_info.price), book_new_info.stock, book_id, ))
         
         #delete old genres and authors
         self.cur.execute("""DELETE FROM book_to_author WHERE book_id = (?)""", (book_id, ))
