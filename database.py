@@ -2,21 +2,72 @@ import sqlite3
 from dataclasses import dataclass
 import decimal
 import time
+import json
+
+@dataclass
+class BookMin:
+    title: str
+    author: str = None
+    genre: str = None
+    product_code: int = None
+    id: int = None
 
 @dataclass
 class Book:
     title: str
     price: decimal
     stock: int
-    authors: list[str]
-    genres: list[str]
+    age: str = None
+    author: str = None
+    binding: str = None
+    brand: str = None
+    dimensions: str = None
+    edition: int = None
+    editor: str = None
+    exam: str = None
+    group:str = None
+    image: str = None
+    imprint: str = None
+    isbn10: int = None
+    isbn13: int = None
+    language: str = None
+    model: int = None
+    pages: int = None
+    product_code: int = None
+    publication_month: str = None
+    publication_year: int = None
+    publisher: str = None
+    series: str = None
+    type_: str = None
+    university: str = None
+    weight: int = None
+    genre: str = None
     id: int = None
+
+def Book_to_BookMin(book: Book):
+    book_min = BookMin(
+        title=book.title, 
+        author=book.author, 
+        genre=book.genre, 
+        product_code=book.product_code, 
+        id=book.id)
+    return book_min
+
+def BookMin_to_Book(book_min: BookMin):
+    book = Book(
+        title=book_min.title, 
+        author=book_min.author, 
+        genre=book_min.genre, 
+        product_code=book_min.product_code, 
+        id=book_min.id)
+    return book
     
 @dataclass
 class Book_Search_Query:
     title: str = None
     author: str = None
     genre: str = None
+    product_code: int = None
     id: int = None
 
 @dataclass
@@ -56,179 +107,439 @@ class Database(object):
         return int(decimal.Decimal(dec) * decimal.Decimal(100))
 
     def _create_table(self):
-        #books
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS books
-        (
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS books(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title STRING NOT NULL,
-            price INTEGER NOT NULL,
-            stock INTEGER NOT NULL
-        );""")
+            age INTEGER,
+            author_id INTEGER,
+            binding_id INTEGER,
+            brand_id INTEGER,
+            dimensions TEXT,
+            edition INTEGER,
+            editor_id INTEGER,
+            exam_id INTEGER,
+            group_id INTEGER,
+            image TEXT,
+            imprint_id INTEGER,
+            isbn10 INTEGER,
+            isbn13 INTEGER,
+            language_id INTEGER,
+            model INTEGER,
+            title TEXT NOT NULL,
+            pages INTEGER,
+            price INTEGER,
+            product_code INTEGER,
+            publication_month_id INTEGER,
+            publication_year INTEGER,
+            publisher_id INTEGER,
+            series_id INTEGER,
+            type_id INTEGER,
+            university_id INTEGER,  
+            weight INTEGER,
+            genre_id INTEGER,
+            stock INTEGER,
 
-        #genre
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS genres
-        (
+            FOREIGN KEY (author_id)
+                REFERENCES author (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (binding_id)
+                REFERENCES binding (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (brand_id)
+                REFERENCES brand (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (editor_id)
+                REFERENCES editor (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (exam_id)
+                REFERENCES exam (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (group_id)
+                REFERENCES group_ (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (imprint_id)
+                REFERENCES imprint (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (language_id)
+                REFERENCES language (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (publication_month_id)
+                REFERENCES month (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (publisher_id)
+                REFERENCES publisher (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (series_id)
+                REFERENCES series (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (type_id)
+                REFERENCES type (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (university_id)
+                REFERENCES university (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL,
+            FOREIGN KEY (genre_id)
+                REFERENCES genre (id)
+                ON UPDATE CASCADE
+                ON DELETE SET NULL
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS author(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name STRING UNIQUE ON CONFLICT IGNORE
-        );""")
-        
-        #author
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS authors
-        (
+            name TEXT NOT NULL UNIQUE,
+            info TEXT
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS binding(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,   
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS brand(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name STRING UNIQUE ON CONFLICT IGNORE
-        );""")
-        
-        #transactions
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS transactions
-        (
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS editor(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS exam(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS group_(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS imprint(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS language(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS month(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS publisher(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS series(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS type(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,   
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS university(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS genre(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+            )""")
+            
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS transactions(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date INTEGER NOT NULL,
             quantity INTEGER NOT NULL,
             price INTEGER NOT NULL,
             book_id INTEGER,
+
             FOREIGN KEY (book_id)
                 REFERENCES books (id)
                 ON UPDATE CASCADE
                 ON DELETE SET NULL
-        );""")
+            )""")
 
-        #book_to_author
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS book_to_author
-        (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            book_id INTEGER NOT NULL,
-            author_id INTEGER NOT NULL,
-            FOREIGN KEY (book_id)
-                REFERENCES books (id) 
-                ON UPDATE CASCADE
-                ON DELETE CASCADE,
-            FOREIGN KEY (author_id)
-                REFERENCES authors (id) 
-                ON UPDATE CASCADE
-                ON DELETE CASCADE
-        );""")
-        
-        #book_to_genre
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS book_to_genre
-        (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            book_id INTEGER NOT NULL,
-            genre_id INTEGER NOT NULL,
-            FOREIGN KEY (book_id)
-                REFERENCES books (id) 
-                ON UPDATE CASCADE
-                ON DELETE CASCADE,
-            FOREIGN KEY (genre_id)
-                REFERENCES genres (id) 
-                ON UPDATE CASCADE
-                ON DELETE CASCADE
-        );""")
-        
         self.con.commit()
 
-    def _insert_genres(self, genres: list[str]) -> list[str]:
-        #insert genres if not exist
-        genre_ids = []
-        for genre in genres:
-            self.cur.execute("""SELECT id FROM genres WHERE name = (?)""", (genre, ))
-            select = self.cur.fetchone()
-            if select is None:
-                self.cur.execute("""INSERT INTO genres (name) VALUES (?)""", (genre, ))
-                genre_ids.append(self.cur.lastrowid)
-            else:
-                genre_ids.append(select[0])
-        return genre_ids
+    #insert something into a table and get id no matter if it exists or not
+    #returns if unique_value is None
+    def _insert_or_ignore(self, table: str, unique_column: str, unique_value: str, other_columns:list[str] = None, other_values: list[str] = None) -> int:
+        if(unique_value is None): return None
+        self.cur.execute(f"""SELECT id FROM {table} WHERE {unique_column} = (?)""", (unique_value, ))
+        select = self.cur.fetchone()
 
-        
-    def _insert_authors(self, authors: list[str]) -> list[str]:
-        author_ids = []
-        for author in authors:
-            self.cur.execute("""SELECT id FROM authors WHERE name = (?)""", (author, ))
-            select = self.cur.fetchone()
-            if select is None:
-                self.cur.execute("""INSERT INTO authors (name) VALUES (?)""", (author, ))
-                author_ids.append(self.cur.lastrowid)
-            else:
-                author_ids.append(select[0])
-        return author_ids
+        if select is None:
+            columns = [unique_column]
+            if other_columns != None: columns.extend(other_columns)
+            values = [unique_value]
+            if other_values != None: values.extend(other_values)
+
+            self.cur.execute(f"""INSERT INTO {table} ({", ".join(columns)}) VALUES ({", ".join(["?"] * len(values))})""", values)
+            return self.cur.lastrowid
+        return select[0]
+
+    def add_book(self, book: Book) -> None:
+        self.add_books([book])
 
     def add_books(self, books: list[Book]) -> None:
         for book in books:
-            #insert book
-            self.cur.execute("""INSERT INTO books(title, price, stock) VALUES(?, ?, ?)""", (book.title, self._decimal_to_int(book.price), book.stock, ))
-            book_id = self.cur.lastrowid
-
-            #insert new genres and authors
-            author_ids = self._insert_authors(book.authors)
-            genre_ids = self._insert_genres(book.genres)
-
-            #insert new genres and authors to book_to_author and book_to_genre
-            self.cur.executemany("""INSERT INTO book_to_author(book_id, author_id) VALUES(?, ?)""", [(book_id, author_id,) for author_id in author_ids])
-            self.cur.executemany("""INSERT INTO book_to_genre(book_id, genre_id) VALUES(?, ?)""", [(book_id, genre_id,) for genre_id in genre_ids])
-
+            #insert book parameters alphabetically
+            self.cur.execute("""INSERT INTO books (
+                age,
+                author_id,
+                binding_id,
+                brand_id,
+                dimensions,
+                edition,
+                editor_id,
+                exam_id,
+                group_id,
+                image,
+                imprint_id,
+                isbn10,
+                isbn13,
+                language_id,
+                model,
+                title,
+                pages,
+                price,
+                product_code,
+                publication_month_id,
+                publication_year,
+                publisher_id,
+                series_id,
+                type_id,
+                university_id,
+                weight,
+                genre_id,
+                stock
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
+                book.age,
+                self._insert_or_ignore("author", "name", book.author),
+                self._insert_or_ignore("binding", "name", book.binding),
+                self._insert_or_ignore("brand", "name", book.brand),
+                book.dimensions,
+                book.edition,
+                self._insert_or_ignore("editor", "name", book.editor),
+                self._insert_or_ignore("exam", "name", book.exam),
+                self._insert_or_ignore("group_", "name", book.group),
+                book.image,
+                self._insert_or_ignore("imprint", "name", book.imprint),
+                book.isbn10,    
+                book.isbn13,
+                self._insert_or_ignore("language", "name", book.language),
+                book.model,
+                book.title,
+                book.pages,
+                self._decimal_to_int(book.price),
+                book.product_code,
+                self._insert_or_ignore("month", "name", book.publication_month),
+                book.publication_year,
+                self._insert_or_ignore("publisher", "name", book.publisher),
+                self._insert_or_ignore("series", "name", book.series),
+                self._insert_or_ignore("type", "name", book.type_),
+                self._insert_or_ignore("university", "name", book.university),
+                book.weight,
+                self._insert_or_ignore("genre", "name", book.genre),
+                book.stock
+                ))
+        
         self.con.commit()
-    
-    #get single book by id
-    def get_book(self, id: int) -> Book:
-        self.cur.execute("""SELECT books.id, books.title, books.price, books.stock, group_concat(authors.name), group_concat(genres.name) FROM books
-        LEFT JOIN book_to_author ON books.id = book_to_author.book_id
-        LEFT JOIN book_to_genre ON books.id = book_to_genre.book_id
-        JOIN authors ON book_to_author.author_id = authors.id
-        JOIN genres ON book_to_genre.genre_id = genres.id
-        WHERE books.id = (?)
-        GROUP BY books.id""", (id,))
-        select = self.cur.fetchone()
-        if select is None:
-            return None
-        return Book(select[1], self._int_to_decimal(select[2]), select[3], select[4].split(","), select[5].split(","), select[0])
+
+    def get_book(self, query: Book_Search_Query, offset:int=0) -> Book:
+        books = self.get_books(query, 1, offset)
+        if books:
+            return books[0]
+        return None
 
     #get list of books by search query
+    #Book_Search_Query id is used as exact match, all other parameters are used as LIKE
     def get_books(self, query: Book_Search_Query, limit:int=25, offset:int=0) -> list[Book]:
-        #get books using search params title, author, genre and id and ignore the query if they are none using group_concat to get all authors and genres without duplicates with DISTINCT
-        self.cur.execute("""SELECT books.id, books.title, books.price, books.stock, group_concat(authors.name), group_concat(genres.name) FROM books
-        LEFT JOIN book_to_author ON books.id = book_to_author.book_id
-        LEFT JOIN book_to_genre ON books.id = book_to_genre.book_id
-        JOIN authors ON book_to_author.author_id = authors.id
-        JOIN genres ON book_to_genre.genre_id = genres.id
-        WHERE instr(books.title, IFNULL((?), '')) > 0
-        AND instr(authors.name, IFNULL((?), '')) > 0
-        AND instr(genres.name, IFNULL((?), '')) > 0
-        AND instr(books.id, IFNULL((?), '')) > 0
-        GROUP BY books.id
-        LIMIT (?) OFFSET (?)""", (query.title, query.author, query.genre, query.id, limit,offset,))
-        select = self.cur.fetchall()
-        if select is None:
-            return None
-        return [Book(row[1], self._int_to_decimal(row[2]), row[3], row[4].split(","), row[5].split(","), row[0]) for row in select]
+        self.cur.execute(f"""SELECT 
+            books.id,
+            books.age,
+            author.name,
+            binding.name,
+            brand.name,
+            books.dimensions,
+            books.edition,
+            editor.name,
+            exam.name,
+            group_.name,
+            books.image,
+            imprint.name,
+            books.isbn10,
+            books.isbn13,
+            language.name,
+            books.model,
+            books.title,
+            books.pages,
+            books.price,
+            books.product_code,
+            month.name,
+            books.publication_year,
+            publisher.name,
+            series.name,
+            type.name,
+            university.name,
+            books.weight,
+            genre.name,
+            books.stock
+            FROM books
 
-    def edit_book(self, book_id: int, book_new_info: Book) -> None:
+            LEFT JOIN author ON author.id = books.author_id
+            LEFT JOIN binding ON binding.id = books.binding_id
+            LEFT JOIN brand ON brand.id = books.brand_id
+            LEFT JOIN editor ON editor.id = books.editor_id
+            LEFT JOIN exam ON exam.id = books.exam_id
+            LEFT JOIN group_ ON group_.id = books.group_id
+            LEFT JOIN imprint ON imprint.id = books.imprint_id
+            LEFT JOIN language ON language.id = books.language_id
+            LEFT JOIN month ON month.id = books.publication_month_id
+            LEFT JOIN publisher ON publisher.id = books.publisher_id
+            LEFT JOIN series ON series.id = books.series_id
+            LEFT JOIN type ON type.id = books.type_id
+            LEFT JOIN university ON university.id = books.university_id
+            LEFT JOIN genre ON genre.id = books.genre_id
+            
+            WHERE ((?1) IS NULL OR instr(LOWER(books.title), LOWER(?1)) > 0)
+            AND   ((?2) IS NULL OR instr(LOWER(author.name), LOWER(?2)) > 0)
+            AND   ((?3) IS NULL OR instr(LOWER(genre.name), LOWER(?3)) > 0)
+            AND   ((?4) IS NULL OR instr(books.product_code, (?4)) > 0)
+            AND   ((?5) IS NULL OR books.id = (?5))
+            GROUP BY books.id
+            LIMIT (?) OFFSET (?)""", (query.title, query.author, query.genre, query.product_code, query.id, limit, offset))
+        
+        books = []
+        for book in self.cur:
+            books.append(Book(
+                id=book[0],
+                age=book[1],
+                author=book[2],
+                binding=book[3],
+                brand=book[4],
+                dimensions=book[5],
+                edition=book[6],
+                editor=book[7],
+                exam=book[8],
+                group=book[9],
+                image=book[10],
+                imprint=book[11],
+                isbn10=book[12],
+                isbn13=book[13],
+                language=book[14],
+                model=book[15],
+                title=book[16],
+                pages=book[17],
+                price=self._int_to_decimal(book[18]),
+                product_code=book[19],
+                publication_month=book[20],
+                publication_year=book[21],
+                publisher=book[22],
+                series=book[23],
+                type_=book[24],
+                university=book[25],
+                weight=book[26],
+                genre=book[27],
+                stock=book[28]
+            ))
+        return books
+
+    #uses book id to update book
+    def edit_book(self, book: Book) -> None:
         #error check in case book does not exist
-        if(self.get_book(id) == None):
+        if(self.get_books(Book_Search_Query(id=book.id)) == None):
             raise ValueError("Book not found")
 
         #update book info
-        self.cur.execute("""UPDATE books SET title = (?), price = (?), stock = (?) WHERE id = (?)""", 
-        (book_new_info.title, self._decimal_to_int(book_new_info.price), book_new_info.stock, book_id, ))
-        
-        #delete old genres and authors
-        self.cur.execute("""DELETE FROM book_to_author WHERE book_id = (?)""", (book_id, ))
-        self.cur.execute("""DELETE FROM book_to_genre WHERE book_id = (?)""", (book_id, ))
-
-        #insert new genres and authors
-        author_ids = self._insert_authors(book_new_info.authors)
-        genre_ids = self._insert_genres(book_new_info.genres)
-
-        #insert new genres and authors to book_to_author and book_to_genre
-        self.cur.executemany("""INSERT INTO book_to_author(book_id, author_id) VALUES(?, ?)""", [(book_id, author_id,) for author_id in author_ids])
-        self.cur.executemany("""INSERT INTO book_to_genre(book_id, genre_id) VALUES(?, ?)""", [(book_id, genre_id,) for genre_id in genre_ids])
+        self.cur.execute("""UPDATE books SET
+            age = ?,
+            author_id = ?,
+            binding_id = ?,
+            brand_id = ?,
+            dimensions = ?,
+            edition = ?,
+            editor_id = ?,
+            exam_id = ?,
+            group_id = ?,
+            image = ?,
+            imprint_id = ?,
+            isbn10 = ?,
+            isbn13 = ?,
+            language_id = ?,
+            model = ?,
+            title = ?,
+            pages = ?,
+            price = ?,
+            product_code = ?,
+            publication_month_id = ?,
+            publication_year = ?,
+            publisher_id = ?,
+            series_id = ?,
+            type_id = ?,
+            university_id = ?,
+            weight = ?,
+            genre_id = ?,
+            stock = ?
+            WHERE id = ?""", (
+            book.age,
+            self._insert_or_ignore("author", "name", book.author),
+            self._insert_or_ignore("binding", "name", book.binding),
+            self._insert_or_ignore("brand", "name", book.brand),
+            book.dimensions,
+            book.edition,
+            self._insert_or_ignore("editor", "name", book.editor),
+            self._insert_or_ignore("exam", "name", book.exam),
+            self._insert_or_ignore("group_", "name", book.group),
+            book.image,
+            self._insert_or_ignore("imprint", "name", book.imprint),
+            book.isbn10,    
+            book.isbn13,
+            self._insert_or_ignore("language", "name", book.language),
+            book.model,
+            book.title,
+            book.pages,
+            self._decimal_to_int(book.price),
+            book.product_code,
+            self._insert_or_ignore("month", "name", book.publication_month),
+            book.publication_year,
+            self._insert_or_ignore("publisher", "name", book.publisher),
+            self._insert_or_ignore("series", "name", book.series),
+            self._insert_or_ignore("type", "name", book.type_),
+            self._insert_or_ignore("university", "name", book.university),
+            book.weight,
+            self._insert_or_ignore("genre", "name", book.genre),
+            book.stock,
+            book.id
+            ))
 
         self.con.commit()
 
     #time is unix timestamp in seconds, if transaction time is None it will be set to current time
     def sell_book(self, transaction:Transaction) -> None:
         #error check in case book does not exist or out of stock
-        book = self.get_book(transaction.book_id)
+        book = self.get_book(Book_Search_Query(id=transaction.book_id))
         if(book == None):
             raise ValueError("Book not found")
         elif(book.stock-transaction.quantity < 0):
@@ -245,11 +556,52 @@ class Database(object):
 
         self.con.commit()
 
+def load_data_from_final_json(db, name):
+    with open(name) as f:
+        books = []
+        data = json.load(f)
+
+        for book in data['Books']:
+            if(book['Product_Code_1'] == None): print(book)
+            books.append(Book(
+            age = book['Age'],
+            author = book['Author'],
+            binding = book['Binding'],
+            brand = book['Brand'],
+            dimensions = book['Dimensions (L X B X H)'],
+            edition = book['Edition'],
+            editor = book['Editor'],
+            exam = book['Exam'],
+            group = book['Group'],
+            image = book['Image'],
+            imprint = book['Imprint'],
+            isbn10 = book['ISBN_10'],
+            isbn13 = book['ISBN_13'],
+            language = book['Language'],
+            model = book['Model'],
+            title = book['Name'],
+            pages = book['Pages'],
+            price = book['Price'],
+            product_code = book['Product_Code_2'],
+            publication_month = book['Publication_Month'],
+            publication_year = book['Publication_Year'],
+            publisher = book['Publisher'],
+            series = book['Series_Name'],
+            type_ = book['Type'],
+            university = book['University'],
+            weight = book['Weight_Gram'],
+            stock = 0))
+        db.add_books(books)
+
 if __name__ == "__main__":
     with Database() as db:
-        db.add_books([Book("test" + str(i), 100, 10, ["test"], ["test"]) for i in range(1, 1000)])
-        #print(db.get_books(Book_Search_Query(id=93), offset=1, limit=5))
-        #db.get_books(Book_Search_Query(id=93))
-        #print(db.sell_book(153, 2, 100))
-        
-        pass 
+        #load_data_from_final_json(db, "final.json")
+        '''
+        print(db.get_book(Book_Search_Query(id=141, title="cand")))
+        book = db.get_book(Book_Search_Query(id=141, title="cand"))
+        book.stock = 10
+        db.edit_book(book)
+
+        db.sell_book(Transaction(book_id=141, quantity=1))
+        '''
+        pass
