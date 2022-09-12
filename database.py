@@ -152,6 +152,11 @@ LEFT JOIN university ON university.id = books.university_id
 LEFT JOIN genre ON genre.id = books.genre_id
 """
 
+_SQL_SELECT_BOOK_QUERY_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_QUERY + """LIMIT (?) OFFSET (?)"""
+_SQL_SELECT_MINBOOK_QUERY_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_QUERY + """LIMIT (?) OFFSET (?)"""
+_SQL_SELECT_BOOK_ID_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_ID  + """LIMIT 1"""
+_SQL_SELECT_MINBOOK_ID_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_ID  + """LIMIT 1"""
+
 class Database(object):
     def __init__(self, filename="database.db"):
         self.con = sqlite3.connect(filename)
@@ -482,35 +487,34 @@ class Database(object):
                 self._insert_or_ignore("university", "name", book.university),
                 book.weight,
                 self._insert_or_ignore("genre", "name", book.genre),
-                book.stock
-                ))
+                book.stock))
         
         self.con.commit()
 
     #get book by exact id
     def get_book(self, id: int) -> Book:
-        self.cur.execute(_SQL_SELECT_BOOK + _SQL_WHERE_ID  + """LIMIT 1""", (id,))
+        self.cur.execute(_SQL_SELECT_BOOK_ID_FULL, (id,))
         book = self.cur.fetchone()
         if book: return self._row_to_book(book)
         return None
 
     #get list of books by search query
     def get_books(self, query: Book_Search_Query, limit:int=25, offset:int=0) -> list[Book]:
-        self.cur.execute(_SQL_SELECT_BOOK + _SQL_WHERE_QUERY + """LIMIT (?) OFFSET (?)""", 
+        self.cur.execute(_SQL_SELECT_BOOK_QUERY_FULL, 
         (query.title, query.author, query.genre, query.product_code, limit, offset))
         
         return [self._row_to_book(row) for row in self.cur]
         
     #get minbook by exact id
     def get_minbook(self, id: int) -> MinBook:
-        self.cur.execute(_SQL_SELECT_MINBOOK + _SQL_WHERE_ID  + """LIMIT 1""", (id,))
+        self.cur.execute(_SQL_SELECT_MINBOOK_ID_FULL, (id,))
         book = self.cur.fetchone()
         if book: return self._row_to_minbook(book)
         return None
 
     #get list of minbooks by search query
     def get_minbooks(self, query: Book_Search_Query, limit:int=25, offset:int=0) -> list[MinBook]:
-        self.cur.execute(_SQL_SELECT_MINBOOK + _SQL_WHERE_QUERY + """LIMIT (?) OFFSET (?)""", 
+        self.cur.execute(_SQL_SELECT_MINBOOK_QUERY_FULL, 
         (query.title, query.author, query.genre, query.product_code, limit, offset))
         
         return [self._row_to_minbook(row) for row in self.cur]
@@ -580,8 +584,7 @@ class Database(object):
             book.weight,
             self._insert_or_ignore("genre", "name", book.genre),
             book.stock,
-            book.id
-            ))
+            book.id))
 
         self.con.commit()
 
