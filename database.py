@@ -5,7 +5,7 @@ import time
 import json
 
 @dataclass
-class BookMin:
+class MinBook:
     title: str
     author: str = None
     genre: str = None
@@ -44,8 +44,8 @@ class Book:
     genre: str = None
     id: int = None
 
-def Book_to_BookMin(book: Book):
-    book_min = BookMin(
+def Book_to_MinBook(book: Book):
+    book_min = MinBook(
         title=book.title, 
         author=book.author, 
         genre=book.genre, 
@@ -53,7 +53,7 @@ def Book_to_BookMin(book: Book):
         id=book.id)
     return book_min
 
-def BookMin_to_Book(book_min: BookMin):
+def MinBook_to_Book(book_min: MinBook):
     book = Book(
         title=book_min.title, 
         author=book_min.author, 
@@ -68,7 +68,6 @@ class Book_Search_Query:
     author: str = None
     genre: str = None
     product_code: int = None
-    id: int = None
 
 @dataclass
 class Transaction:
@@ -76,6 +75,82 @@ class Transaction:
     quantity: int = 1
     time: int = None
     id: int = None
+
+
+_SQL_WHERE_QUERY =  """
+WHERE ((?1) IS NULL OR instr(LOWER(books.title), LOWER(?1)) > 0)
+AND   ((?2) IS NULL OR instr(LOWER(author.name), LOWER(?2)) > 0)
+AND   ((?3) IS NULL OR instr(LOWER(genre.name), LOWER(?3)) > 0)
+AND   ((?4) IS NULL OR instr(LOWER(books.product_code), LOWER(?4)) > 0)
+ORDER by books.product_code
+"""
+
+_SQL_WHERE_ID = """
+WHERE books.id = ?
+"""
+
+
+_SQL_SELECT_MINBOOK = """
+SELECT 
+books.id,
+books.title,
+author.name,
+genre.name,
+books.product_code
+FROM books
+
+LEFT JOIN author ON author.id = books.author_id
+LEFT JOIN genre ON genre.id = books.genre_id
+"""
+
+_SQL_SELECT_BOOK = """
+SELECT 
+books.id,
+books.age,
+author.name,
+binding.name,
+brand.name,
+books.dimensions,
+books.edition,
+editor.name,
+exam.name,
+group_.name,
+books.image,
+imprint.name,
+books.isbn10,
+books.isbn13,
+language.name,
+books.model,
+books.title,
+books.pages,
+books.price,
+books.product_code,
+month.name,
+books.publication_year,
+publisher.name,
+series.name,
+type.name,
+university.name,
+books.weight,
+genre.name,
+books.stock
+FROM books
+
+LEFT JOIN author ON author.id = books.author_id
+LEFT JOIN binding ON binding.id = books.binding_id
+LEFT JOIN brand ON brand.id = books.brand_id
+LEFT JOIN editor ON editor.id = books.editor_id
+LEFT JOIN exam ON exam.id = books.exam_id
+LEFT JOIN group_ ON group_.id = books.group_id
+LEFT JOIN imprint ON imprint.id = books.imprint_id
+LEFT JOIN language ON language.id = books.language_id
+LEFT JOIN month ON month.id = books.publication_month_id
+LEFT JOIN publisher ON publisher.id = books.publisher_id
+LEFT JOIN series ON series.id = books.series_id
+LEFT JOIN type ON type.id = books.type_id
+LEFT JOIN university ON university.id = books.university_id
+LEFT JOIN genre ON genre.id = books.genre_id
+"""
 
 class Database(object):
     def __init__(self, filename="database.db"):
@@ -299,6 +374,51 @@ class Database(object):
             return self.cur.lastrowid
         return select[0]
 
+    def _id_exist(self, table:str, id:int) -> bool:
+        self.cur.execute(f"""SELECT id FROM {table} WHERE id = (?)""", (id, ))
+        if self.cur.fetchone() is None: return False
+        return True
+
+    def _row_to_book(self, row: list) -> Book:
+        return Book(
+            id=row[0],
+            age=row[1],
+            author=row[2],
+            binding=row[3],
+            brand=row[4],
+            dimensions=row[5],
+            edition=row[6],
+            editor=row[7],
+            exam=row[8],
+            group=row[9],
+            image=row[10],
+            imprint=row[11],
+            isbn10=row[12],
+            isbn13=row[13],
+            language=row[14],
+            model=row[15],
+            title=row[16],
+            pages=row[17],
+            price=self._int_to_decimal(row[18]),
+            product_code=row[19],
+            publication_month=row[20],
+            publication_year=row[21],
+            publisher=row[22],
+            series=row[23],
+            type_=row[24],
+            university=row[25],
+            weight=row[26],
+            genre=row[27],
+            stock=row[28])
+            
+    def _row_to_minbook(self, row: list) -> MinBook:
+        return MinBook(
+            title=row[1], 
+            author=row[2], 
+            genre=row[3], 
+            product_code=row[4], 
+            id=row[0])
+
     def add_book(self, book: Book) -> None:
         self.add_books([book])
 
@@ -367,109 +487,38 @@ class Database(object):
         
         self.con.commit()
 
-    def get_book(self, query: Book_Search_Query, offset:int=0) -> Book:
-        books = self.get_books(query, 1, offset)
-        if books:
-            return books[0]
+    #get book by exact id
+    def get_book(self, id: int) -> Book:
+        self.cur.execute(_SQL_SELECT_BOOK + _SQL_WHERE_ID  + """LIMIT 1""", (id,))
+        book = self.cur.fetchone()
+        if book: return self._row_to_book(book)
         return None
 
     #get list of books by search query
-    #Book_Search_Query id is used as exact match, all other parameters are used as LIKE
     def get_books(self, query: Book_Search_Query, limit:int=25, offset:int=0) -> list[Book]:
-        self.cur.execute(f"""SELECT 
-            books.id,
-            books.age,
-            author.name,
-            binding.name,
-            brand.name,
-            books.dimensions,
-            books.edition,
-            editor.name,
-            exam.name,
-            group_.name,
-            books.image,
-            imprint.name,
-            books.isbn10,
-            books.isbn13,
-            language.name,
-            books.model,
-            books.title,
-            books.pages,
-            books.price,
-            books.product_code,
-            month.name,
-            books.publication_year,
-            publisher.name,
-            series.name,
-            type.name,
-            university.name,
-            books.weight,
-            genre.name,
-            books.stock
-            FROM books
-
-            LEFT JOIN author ON author.id = books.author_id
-            LEFT JOIN binding ON binding.id = books.binding_id
-            LEFT JOIN brand ON brand.id = books.brand_id
-            LEFT JOIN editor ON editor.id = books.editor_id
-            LEFT JOIN exam ON exam.id = books.exam_id
-            LEFT JOIN group_ ON group_.id = books.group_id
-            LEFT JOIN imprint ON imprint.id = books.imprint_id
-            LEFT JOIN language ON language.id = books.language_id
-            LEFT JOIN month ON month.id = books.publication_month_id
-            LEFT JOIN publisher ON publisher.id = books.publisher_id
-            LEFT JOIN series ON series.id = books.series_id
-            LEFT JOIN type ON type.id = books.type_id
-            LEFT JOIN university ON university.id = books.university_id
-            LEFT JOIN genre ON genre.id = books.genre_id
-            
-            WHERE ((?1) IS NULL OR instr(LOWER(books.title), LOWER(?1)) > 0)
-            AND   ((?2) IS NULL OR instr(LOWER(author.name), LOWER(?2)) > 0)
-            AND   ((?3) IS NULL OR instr(LOWER(genre.name), LOWER(?3)) > 0)
-            AND   ((?4) IS NULL OR instr(books.product_code, (?4)) > 0)
-            AND   ((?5) IS NULL OR books.id = (?5))
-            GROUP BY books.id
-            LIMIT (?) OFFSET (?)""", (query.title, query.author, query.genre, query.product_code, query.id, limit, offset))
+        self.cur.execute(_SQL_SELECT_BOOK + _SQL_WHERE_QUERY + """LIMIT (?) OFFSET (?)""", 
+        (query.title, query.author, query.genre, query.product_code, limit, offset))
         
-        books = []
-        for book in self.cur:
-            books.append(Book(
-                id=book[0],
-                age=book[1],
-                author=book[2],
-                binding=book[3],
-                brand=book[4],
-                dimensions=book[5],
-                edition=book[6],
-                editor=book[7],
-                exam=book[8],
-                group=book[9],
-                image=book[10],
-                imprint=book[11],
-                isbn10=book[12],
-                isbn13=book[13],
-                language=book[14],
-                model=book[15],
-                title=book[16],
-                pages=book[17],
-                price=self._int_to_decimal(book[18]),
-                product_code=book[19],
-                publication_month=book[20],
-                publication_year=book[21],
-                publisher=book[22],
-                series=book[23],
-                type_=book[24],
-                university=book[25],
-                weight=book[26],
-                genre=book[27],
-                stock=book[28]
-            ))
-        return books
+        return [self._row_to_book(row) for row in self.cur]
+        
+    #get minbook by exact id
+    def get_minbook(self, id: int) -> MinBook:
+        self.cur.execute(_SQL_SELECT_MINBOOK + _SQL_WHERE_ID  + """LIMIT 1""", (id,))
+        book = self.cur.fetchone()
+        if book: return self._row_to_minbook(book)
+        return None
+
+    #get list of minbooks by search query
+    def get_minbooks(self, query: Book_Search_Query, limit:int=25, offset:int=0) -> list[MinBook]:
+        self.cur.execute(_SQL_SELECT_MINBOOK + _SQL_WHERE_QUERY + """LIMIT (?) OFFSET (?)""", 
+        (query.title, query.author, query.genre, query.product_code, limit, offset))
+        
+        return [self._row_to_minbook(row) for row in self.cur]
 
     #uses book id to update book
     def edit_book(self, book: Book) -> None:
         #error check in case book does not exist
-        if(self.get_books(Book_Search_Query(id=book.id)) == None):
+        if(not self._id_exist("books", book.id)):
             raise ValueError("Book not found")
 
         #update book info
@@ -539,7 +588,7 @@ class Database(object):
     #time is unix timestamp in seconds, if transaction time is None it will be set to current time
     def sell_book(self, transaction:Transaction) -> None:
         #error check in case book does not exist or out of stock
-        book = self.get_book(Book_Search_Query(id=transaction.book_id))
+        book = self.get_book(transaction.book_id)
         if(book == None):
             raise ValueError("Book not found")
         elif(book.stock-transaction.quantity < 0):
@@ -557,45 +606,45 @@ class Database(object):
         self.con.commit()
 
 def load_data_from_final_json(db, name):
-    with open(name) as f:
+    with open(name, encoding="utf-8") as f:
         books = []
         data = json.load(f)
 
         for book in data['Books']:
-            if(book['Product_Code_1'] == None): print(book)
             books.append(Book(
-            age = book['Age'],
-            author = book['Author'],
-            binding = book['Binding'],
-            brand = book['Brand'],
-            dimensions = book['Dimensions (L X B X H)'],
-            edition = book['Edition'],
-            editor = book['Editor'],
-            exam = book['Exam'],
-            group = book['Group'],
-            image = book['Image'],
-            imprint = book['Imprint'],
-            isbn10 = book['ISBN_10'],
-            isbn13 = book['ISBN_13'],
-            language = book['Language'],
-            model = book['Model'],
-            title = book['Name'],
-            pages = book['Pages'],
-            price = book['Price'],
-            product_code = book['Product_Code_2'],
-            publication_month = book['Publication_Month'],
-            publication_year = book['Publication_Year'],
-            publisher = book['Publisher'],
-            series = book['Series_Name'],
-            type_ = book['Type'],
-            university = book['University'],
-            weight = book['Weight_Gram'],
-            stock = 0))
+                age = book['Age'],
+                author = book['Author'],
+                binding = book['Binding'],
+                brand = book['Brand'],
+                dimensions = book['Dimensions (L X B X H)'],
+                edition = book['Edition'],
+                editor = book['Editor'],
+                exam = book['Exam'],
+                group = book['Group'],
+                image = book['Image'],
+                imprint = book['Imprint'],
+                isbn10 = book['ISBN_10'],
+                isbn13 = book['ISBN_13'],
+                language = book['Language'],
+                model = book['Model'],
+                title = book['Name'],
+                pages = book['Pages'],
+                price = book['Price'],
+                product_code = book['Product_Code_2'],
+                publication_month = book['Publication_Month'],
+                publication_year = book['Publication_Year'],
+                publisher = book['Publisher'],
+                series = book['Series_Name'],
+                type_ = book['Type'],
+                university = book['University'],
+                weight = book['Weight_Gram'],
+                stock = 0))
         db.add_books(books)
 
 if __name__ == "__main__":
     with Database() as db:
         #load_data_from_final_json(db, "final.json")
+        print(db.get_minbook(141))
         '''
         print(db.get_book(Book_Search_Query(id=141, title="cand")))
         book = db.get_book(Book_Search_Query(id=141, title="cand"))
