@@ -1,8 +1,10 @@
+from email.policy import default
 import sqlite3
 from dataclasses import dataclass
 import decimal
 import time
 import json
+from enum import IntEnum
 
 @dataclass
 class MinBook:
@@ -76,13 +78,23 @@ class Transaction:
     time: int = None
     id: int = None
 
+class sort_by(IntEnum):
+    product_code_desc = 0
+    product_code_asc = 1
+    genre_desc = 2
+    genre_asc = 3
+    author_desc = 4
+    author_asc = 5
+    title_desc = 6
+    title_asc = 7
+    popularity_desc = 8
+    popularity_asc = 9
 
 _SQL_WHERE_QUERY =  """
 WHERE ((?1) IS NULL OR instr(LOWER(books.title), LOWER(?1)) > 0)
 AND   ((?2) IS NULL OR instr(LOWER(author.name), LOWER(?2)) > 0)
 AND   ((?3) IS NULL OR instr(LOWER(genre.name), LOWER(?3)) > 0)
 AND   ((?4) IS NULL OR instr(LOWER(books.product_code), LOWER(?4)) > 0)
-ORDER by books.product_code
 """
 
 _SQL_WHERE_ID = """
@@ -152,10 +164,18 @@ LEFT JOIN university ON university.id = books.university_id
 LEFT JOIN genre ON genre.id = books.genre_id
 """
 
-_SQL_SELECT_BOOK_QUERY_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_QUERY + """LIMIT (?) OFFSET (?)"""
-_SQL_SELECT_MINBOOK_QUERY_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_QUERY + """LIMIT (?) OFFSET (?)"""
-_SQL_SELECT_BOOK_ID_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_ID  + """LIMIT 1"""
-_SQL_SELECT_MINBOOK_ID_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_ID  + """LIMIT 1"""
+_SQL_LIMIT_1 = """
+LIMIT 1
+"""
+
+_SQL_LIMIT_OFFSET = """
+LIMIT (?) OFFSET (?)
+"""
+
+_SQL_SELECT_BOOK_QUERY_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_QUERY + _SQL_LIMIT_OFFSET
+_SQL_SELECT_MINBOOK_QUERY_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_QUERY + _SQL_LIMIT_OFFSET
+_SQL_SELECT_BOOK_ID_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_ID  + _SQL_LIMIT_1
+_SQL_SELECT_MINBOOK_ID_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_ID  + _SQL_LIMIT_1
 
 class Database(object):
     def __init__(self, filename="database.db"):
@@ -362,6 +382,38 @@ class Database(object):
 
         self.con.commit()
 
+    @staticmethod
+    def _order_by_not_null(value, ascending=True):
+        return f"ORDER BY {value} {'ASC' if ascending else 'DESC'} IS NULL"
+
+    @staticmethod
+    def _sort_by_to_order_by(sort):
+        match sort:
+            case sort_by.product_code_desc:
+                return Database._order_by_not_null("books.product_code", False)
+            case sort_by.product_code_asc:
+                return Database._order_by_not_null("books.product_code", True)
+            case sort_by.title_desc:
+                return Database._order_by_not_null("books.title", False)
+            case sort_by.title_asc:
+                return Database._order_by_not_null("books.title", True)
+            case sort_by.author_desc:
+                return Database._order_by_not_null("books.author", False)
+            case sort_by.author_asc:
+                return Database._order_by_not_null("books.author", True)
+            case sort_by.genre_desc:
+                return Database._order_by_not_null("books.genre", False)
+            case sort_by.genre_asc:
+                return Database._order_by_not_null("books.genre", True)
+            case sort_by.popularity_desc:
+                return Database._order_by_not_null("books.popularity", False)
+            case sort_by.popularity_asc:
+                return Database._order_by_not_null("books.popularity", True)
+        
+        # Default
+        return Database._sort_by_to_order_by(sort_by.product_code_desc)
+            
+
     #insert something into a table and get id no matter if it exists or not
     #returns if unique_value is None
     def _insert_or_ignore(self, table: str, unique_column: str, unique_value: str, other_columns:list[str] = None, other_values: list[str] = None) -> int:
@@ -499,8 +551,8 @@ class Database(object):
         return None
 
     #get list of books by search query
-    def get_books(self, query: Book_Search_Query, limit:int=25, offset:int=0) -> list[Book]:
-        self.cur.execute(_SQL_SELECT_BOOK_QUERY_FULL, 
+    def get_books(self, query: Book_Search_Query, sort:sort_by=None, limit:int=25, offset:int=0) -> list[Book]:
+        self.cur.execute(_SQL_SELECT_BOOK_QUERY_FULL + self._sort_by_to_order_by(sort), 
         (query.title, query.author, query.genre, query.product_code, limit, offset))
         
         return [self._row_to_book(row) for row in self.cur]
@@ -513,8 +565,9 @@ class Database(object):
         return None
 
     #get list of minbooks by search query
-    def get_minbooks(self, query: Book_Search_Query, limit:int=25, offset:int=0) -> list[MinBook]:
-        self.cur.execute(_SQL_SELECT_MINBOOK_QUERY_FULL, 
+    def get_minbooks(self, query: Book_Search_Query, sort:sort_by=None, limit:int=25, offset:int=0) -> list[MinBook]:
+        print(_SQL_SELECT_MINBOOK_QUERY_FULL + self._sort_by_to_order_by(sort))
+        self.cur.execute(_SQL_SELECT_MINBOOK_QUERY_FULL + self._sort_by_to_order_by(sort), 
         (query.title, query.author, query.genre, query.product_code, limit, offset))
         
         return [self._row_to_minbook(row) for row in self.cur]

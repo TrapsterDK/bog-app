@@ -72,7 +72,6 @@ class App(tk.Tk):
             self.search_sv.append(sv)
             self.search_bars.append(search_bar)
 
-        
         #allow only numbers for product code
         self.search_bars[3].configure(validate=tk.ALL, validatecommand=((self.register(self._entry_restrict_numbers)), '%P'))
 
