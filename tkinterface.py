@@ -5,6 +5,8 @@ from database import *
 
 #class for tkinter app
 class App(tk.Tk):
+    none_item = "**Ukendt**"
+
     def __init__(self, db_name="database.db"):
         super().__init__()
         self.db = Database(db_name)
@@ -79,6 +81,19 @@ class App(tk.Tk):
         search_title = tk.Label(self.search_top_frame, text="Søg efter bøger", font='Helvetica 15 bold')
         search_title.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
+        #sort by option
+        sort_by_options = []
+
+        #variable for sort by option
+        self.sort_by = tk.StringVar()
+        self.sort_by.set(sort_by_options[0])   
+        self.sort_by.trace_add("write", self.search)
+        
+        #menu
+        self.w = tk.OptionMenu(self.search_top_frame, self.sort_by, *sort_by_options)
+        self.w.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+
+
         #populate treeview
         self.populate_tree()
         
@@ -90,8 +105,8 @@ class App(tk.Tk):
 
     def populate_tree(self, search: Book_Search_Query=Book_Search_Query()):
         self.tree.delete(*self.tree.get_children())
-        for book in self.db.get_minbooks(search, limit=50):
-            self.tree.insert("", tk.END, values=(book.title, book.author, book.genre, book.product_code))
+        for book in self.db.get_minbooks(search):
+            self.tree.insert("", tk.END, values=(book.title or self.none_item, book.author or self.none_item, book.genre or self.none_item, book.product_code or self.none_item))
 
     def info(self):
         pass
@@ -107,10 +122,10 @@ class App(tk.Tk):
     
     def search(self, *args):
         search = Book_Search_Query(
-            title=self.search_bars[0].get() or None, 
-            author=self.search_bars[1].get() or None, 
-            genre=self.search_bars[2].get() or None, 
-            product_code=self.search_bars[3].get() or None)
+            title=self.search_sv[0].get() or None, 
+            author=self.search_sv[1].get() or None, 
+            genre=self.search_sv[2].get() or None, 
+            product_code=self.search_sv[3].get() or None)
         self.populate_tree(search)
 
 
