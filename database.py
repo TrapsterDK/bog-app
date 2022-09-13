@@ -1,106 +1,103 @@
-from email.policy import default
 import sqlite3
 from dataclasses import dataclass
 import decimal
 import time
 import json
-from enum import IntEnum
+from enum import Enum
+from typing import Callable
+
 
 @dataclass
 class MinBook:
-    title: str
-    author: str = None
-    genre: str = None
-    product_code: int = None
-    id: int = None
+    title:              str
+    author:             str = None
+    genre:              str = None
+    product_code:       int = None
+    id:                 int = None
+
 
 @dataclass
 class Book:
-    title: str
-    price: decimal
-    stock: int
-    age: str = None
-    author: str = None
-    binding: str = None
-    brand: str = None
-    dimensions: str = None
-    edition: int = None
-    editor: str = None
-    exam: str = None
-    group:str = None
-    image: str = None
-    imprint: str = None
-    isbn10: int = None
-    isbn13: int = None
-    language: str = None
-    model: int = None
-    pages: int = None
-    product_code: int = None
-    publication_month: str = None
-    publication_year: int = None
-    publisher: str = None
-    series: str = None
-    type_: str = None
-    university: str = None
-    weight: int = None
-    genre: str = None
-    id: int = None
+    title:              str
+    price:              decimal
+    stock:              int
+    age:                str = None
+    author:             str = None
+    binding:            str = None
+    brand:              str = None
+    dimensions:         str = None
+    edition:            int = None
+    editor:             str = None
+    exam:               str = None
+    group:              str = None
+    image:              str = None
+    imprint:            str = None
+    isbn10:             int = None
+    isbn13:             int = None
+    language:           str = None
+    model:              int = None
+    pages:              int = None
+    product_code:       int = None
+    publication_month:  str = None
+    publication_year:   int = None
+    publisher:          str = None
+    series:             str = None
+    type_:              str = None
+    university:         str = None
+    weight:             int = None
+    genre:              str = None
+    id:                 int = None
+
 
 def Book_to_MinBook(book: Book):
     book_min = MinBook(
-        title=book.title, 
-        author=book.author, 
-        genre=book.genre, 
-        product_code=book.product_code, 
+        title=book.title,
+        author=book.author,
+        genre=book.genre,
+        product_code=book.product_code,
         id=book.id)
     return book_min
 
+
 def MinBook_to_Book(book_min: MinBook):
     book = Book(
-        title=book_min.title, 
-        author=book_min.author, 
-        genre=book_min.genre, 
-        product_code=book_min.product_code, 
+        title=book_min.title,
+        author=book_min.author,
+        genre=book_min.genre,
+        product_code=book_min.product_code,
         id=book_min.id)
     return book
-    
+
+
 @dataclass
 class Book_Search_Query:
-    title: str = None
-    author: str = None
-    genre: str = None
-    product_code: int = None
+    title:              str = None
+    author:             str = None
+    genre:              str = None
+    product_code:       int = None
+
 
 @dataclass
 class Transaction:
-    book_id: int
-    quantity: int = 1
-    time: int = None
-    id: int = None
+    book_id:            int
+    quantity:           int
+    time:               int = None
+    id:                 int = None
 
-class sort_by(IntEnum):
-    product_code_desc = 0
-    product_code_asc = 1
-    genre_desc = 2
-    genre_asc = 3
-    author_desc = 4
-    author_asc = 5
-    title_desc = 6
-    title_asc = 7
-    popularity_desc = 8
-    popularity_asc = 9
 
-_SQL_WHERE_QUERY =  """
-WHERE ((?1) IS NULL OR instr(LOWER(books.title), LOWER(?1)) > 0)
-AND   ((?2) IS NULL OR instr(LOWER(author.name), LOWER(?2)) > 0)
-AND   ((?3) IS NULL OR instr(LOWER(genre.name), LOWER(?3)) > 0)
-AND   ((?4) IS NULL OR instr(LOWER(books.product_code), LOWER(?4)) > 0)
-"""
+class sort_by(Enum):
+    product_code_desc = ("books.product_code",  "DESC", "FIRST")
+    product_code_asc =  ("books.product_code",  "ASC",  "LAST")
+    genre_desc =        ("genre.name",          "DESC", "FIRST")
+    genre_asc =         ("genre.name",          "ASC",  "LAST")
+    author_desc =       ("author.name",         "DESC", "FIRST")
+    author_asc =        ("author.name",         "ASC",  "LAST")
+    title_desc =        ("books.title",         "DESC", "FIRST")
+    title_asc =         ("books.title",         "ASC",  "LAST")
 
-_SQL_WHERE_ID = """
-WHERE books.id = ?
-"""
 
+_DEFAULT_SORT_BY = sort_by.product_code_asc
+_DEFAULT_SEARH_LIMIT = 75
 
 _SQL_SELECT_MINBOOK = """
 SELECT 
@@ -164,18 +161,25 @@ LEFT JOIN university ON university.id = books.university_id
 LEFT JOIN genre ON genre.id = books.genre_id
 """
 
-_SQL_LIMIT_1 = """
-LIMIT 1
-"""
-
-_SQL_LIMIT_OFFSET = """
+_SQL_WHERE_QUERY = """
+WHERE ((?1) IS NULL OR instr(LOWER(books.title), LOWER(?1)) > 0)
+AND   ((?2) IS NULL OR instr(LOWER(author.name), LOWER(?2)) > 0)
+AND   ((?3) IS NULL OR instr(LOWER(genre.name), LOWER(?3)) > 0)
+AND   ((?4) IS NULL OR instr(LOWER(books.product_code), LOWER(?4)) > 0)
+ORDER BY {} {} NULLS {}
 LIMIT (?) OFFSET (?)
 """
 
-_SQL_SELECT_BOOK_QUERY_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_QUERY + _SQL_LIMIT_OFFSET
-_SQL_SELECT_MINBOOK_QUERY_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_QUERY + _SQL_LIMIT_OFFSET
-_SQL_SELECT_BOOK_ID_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_ID  + _SQL_LIMIT_1
-_SQL_SELECT_MINBOOK_ID_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_ID  + _SQL_LIMIT_1
+_SQL_WHERE_ID = """
+WHERE books.id = ?
+LIMIT 1
+"""
+
+_SQL_SELECT_BOOK_QUERY_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_QUERY
+_SQL_SELECT_MINBOOK_QUERY_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_QUERY
+_SQL_SELECT_BOOK_ID_FULL = _SQL_SELECT_BOOK + _SQL_WHERE_ID 
+_SQL_SELECT_MINBOOK_ID_FULL = _SQL_SELECT_MINBOOK + _SQL_WHERE_ID 
+
 
 class Database(object):
     def __init__(self, filename="database.db"):
@@ -382,61 +386,40 @@ class Database(object):
 
         self.con.commit()
 
-    @staticmethod
-    def _order_by_not_null(value, ascending=True):
-        return f"ORDER BY {value} {'ASC' if ascending else 'DESC'} IS NULL"
-
-    @staticmethod
-    def _sort_by_to_order_by(sort):
-        match sort:
-            case sort_by.product_code_desc:
-                return Database._order_by_not_null("books.product_code", False)
-            case sort_by.product_code_asc:
-                return Database._order_by_not_null("books.product_code", True)
-            case sort_by.title_desc:
-                return Database._order_by_not_null("books.title", False)
-            case sort_by.title_asc:
-                return Database._order_by_not_null("books.title", True)
-            case sort_by.author_desc:
-                return Database._order_by_not_null("books.author", False)
-            case sort_by.author_asc:
-                return Database._order_by_not_null("books.author", True)
-            case sort_by.genre_desc:
-                return Database._order_by_not_null("books.genre", False)
-            case sort_by.genre_asc:
-                return Database._order_by_not_null("books.genre", True)
-            case sort_by.popularity_desc:
-                return Database._order_by_not_null("books.popularity", False)
-            case sort_by.popularity_asc:
-                return Database._order_by_not_null("books.popularity", True)
-        
-        # Default
-        return Database._sort_by_to_order_by(sort_by.product_code_desc)
+    # insert something into a table and get id no matter if it exists or not
+    # returns if unique_value is None
+    def _insert_or_ignore(self, table: str, unique_column: str, unique_value: str, other_columns: list[str] = None, other_values: list[str] = None) -> int:
+        if(unique_value is None): 
+            return None
             
-
-    #insert something into a table and get id no matter if it exists or not
-    #returns if unique_value is None
-    def _insert_or_ignore(self, table: str, unique_column: str, unique_value: str, other_columns:list[str] = None, other_values: list[str] = None) -> int:
-        if(unique_value is None): return None
         self.cur.execute(f"""SELECT id FROM {table} WHERE {unique_column} = (?)""", (unique_value, ))
         select = self.cur.fetchone()
 
         if select is None:
             columns = [unique_column]
-            if other_columns != None: columns.extend(other_columns)
+            if other_columns is not None: 
+                columns.extend(other_columns)
+
             values = [unique_value]
-            if other_values != None: values.extend(other_values)
+            if other_values is not None: 
+                values.extend(other_values)
 
             self.cur.execute(f"""INSERT INTO {table} ({", ".join(columns)}) VALUES ({", ".join(["?"] * len(values))})""", values)
             return self.cur.lastrowid
+
         return select[0]
 
-    def _id_exist(self, table:str, id:int) -> bool:
+    # check if id exists in table
+    def _id_exist(self, table: str, id: int) -> bool:
         self.cur.execute(f"""SELECT id FROM {table} WHERE id = (?)""", (id, ))
-        if self.cur.fetchone() is None: return False
+
+        if self.cur.fetchone() is None: 
+            return False
+
         return True
 
-    def _row_to_book(self, row: list) -> Book:
+    @staticmethod
+    def _row_to_book(row: list) -> Book:
         return Book(
             id=row[0],
             age=row[1],
@@ -456,7 +439,7 @@ class Database(object):
             model=row[15],
             title=row[16],
             pages=row[17],
-            price=self._int_to_decimal(row[18]),
+            price=Database._int_to_decimal(row[18]),
             product_code=row[19],
             publication_month=row[20],
             publication_year=row[21],
@@ -468,7 +451,8 @@ class Database(object):
             genre=row[27],
             stock=row[28])
             
-    def _row_to_minbook(self, row: list) -> MinBook:
+    @staticmethod
+    def _row_to_minbook(row: list) -> MinBook:
         return MinBook(
             title=row[1], 
             author=row[2], 
@@ -481,7 +465,7 @@ class Database(object):
 
     def add_books(self, books: list[Book]) -> None:
         for book in books:
-            #insert book parameters alphabetically
+            # insert book parameters alphabetically
             self.cur.execute("""INSERT INTO books (
                 age,
                 author_id,
@@ -543,42 +527,44 @@ class Database(object):
         
         self.con.commit()
 
-    #get book by exact id
+    # internal book getter from query
+    def _get_book_query(self, query: str, args: tuple, row_to_book: Callable) -> Book or MinBook:
+        self.cur.execute(query, args)
+        row = self.cur.fetchone()
+
+        if row is None: 
+            return None
+
+        return row_to_book(row)
+
+    # get book by exact id
     def get_book(self, id: int) -> Book:
-        self.cur.execute(_SQL_SELECT_BOOK_ID_FULL, (id,))
-        book = self.cur.fetchone()
-        if book: return self._row_to_book(book)
-        return None
-
-    #get list of books by search query
-    def get_books(self, query: Book_Search_Query, sort:sort_by=None, limit:int=25, offset:int=0) -> list[Book]:
-        self.cur.execute(_SQL_SELECT_BOOK_QUERY_FULL + self._sort_by_to_order_by(sort), 
-        (query.title, query.author, query.genre, query.product_code, limit, offset))
+        return self._get_book_query(_SQL_SELECT_BOOK_ID_FULL, (id,), self._row_to_book)
         
-        return [self._row_to_book(row) for row in self.cur]
-        
-    #get minbook by exact id
+    # get minbook by exact id
     def get_minbook(self, id: int) -> MinBook:
-        self.cur.execute(_SQL_SELECT_MINBOOK_ID_FULL, (id,))
-        book = self.cur.fetchone()
-        if book: return self._row_to_minbook(book)
-        return None
+        return self._get_book_query(_SQL_SELECT_MINBOOK_ID_FULL, (id,), self._row_to_minbook)
 
-    #get list of minbooks by search query
-    def get_minbooks(self, query: Book_Search_Query, sort:sort_by=None, limit:int=25, offset:int=0) -> list[MinBook]:
-        print(_SQL_SELECT_MINBOOK_QUERY_FULL + self._sort_by_to_order_by(sort))
-        self.cur.execute(_SQL_SELECT_MINBOOK_QUERY_FULL + self._sort_by_to_order_by(sort), 
-        (query.title, query.author, query.genre, query.product_code, limit, offset))
-        
-        return [self._row_to_minbook(row) for row in self.cur]
+    # internal book getter from query
+    def _get_books_query(self, query: str, sort: sort_by, args: tuple, row_to_book: Callable) -> list[Book or MinBook]:
+        self.cur.execute(query.format(*sort.value), args)
+        return [row_to_book(row) for row in self.cur]
 
-    #uses book id to update book
+    # get list of books by search query
+    def get_books(self, query: Book_Search_Query, sort: sort_by = _DEFAULT_SORT_BY, limit: int = _DEFAULT_SEARH_LIMIT, offset: int = 0) -> list[Book]:
+        return self._get_books_query(_SQL_SELECT_BOOK_QUERY_FULL, sort, (query.title, query.author, query.genre, query.product_code, limit, offset), self._row_to_book)
+
+    # get list of minbooks by search query
+    def get_minbooks(self, query: Book_Search_Query, sort: sort_by = _DEFAULT_SORT_BY, limit: int = _DEFAULT_SEARH_LIMIT, offset: int = 0) -> list[MinBook]:
+        return self._get_books_query(_SQL_SELECT_MINBOOK_QUERY_FULL, sort, (query.title, query.author, query.genre, query.product_code, limit, offset), self._row_to_minbook)
+
+    # uses book id to update book
     def edit_book(self, book: Book) -> None:
-        #error check in case book does not exist
-        if(not self._id_exist("books", book.id)):
+        # serror check in case book does not exist
+        if (not self._id_exist("books", book.id)):
             raise ValueError("Book not found")
 
-        #update book info
+        # update book info
         self.cur.execute("""UPDATE books SET
             age = ?,
             author_id = ?,
@@ -641,25 +627,27 @@ class Database(object):
 
         self.con.commit()
 
-    #time is unix timestamp in seconds, if transaction time is None it will be set to current time
-    def sell_book(self, transaction:Transaction) -> None:
-        #error check in case book does not exist or out of stock
+    # time is unix timestamp in seconds, if transaction time is None it will be set to current time
+    def sell_book(self, transaction: Transaction) -> None:
+        # error check in case book does not exist or out of stock
         book = self.get_book(transaction.book_id)
-        if(book == None):
+        if (book is None):
             raise ValueError("Book not found")
-        elif(book.stock-transaction.quantity < 0):
+        elif (book.stock-transaction.quantity < 0):
             raise ValueError(f"Only {book.stock} left in stock, cannot sell {transaction.quantity}")
 
-        #update stock
+        # update stock
         self.cur.execute("""UPDATE books SET stock = stock - (?) WHERE id = (?)""", (transaction.quantity, transaction.book_id, ))
 
-        if(transaction.time == None):
+        if (transaction.time is None):
             transaction.time = int(time.time())
 
-        #add transaction
-        self.cur.execute("""INSERT INTO transactions(date, book_id, quantity, price) VALUES(?, ?, ?, ?)""", (transaction.time, transaction.book_id, transaction.quantity, self._decimal_to_int(book.price),))
+        # add transaction
+        self.cur.execute("""INSERT INTO transactions(date, book_id, quantity, price) VALUES(?, ?, ?, ?)""",
+            (transaction.time, transaction.book_id, transaction.quantity, self._decimal_to_int(book.price),))
 
         self.con.commit()
+
 
 def load_data_from_final_json(db, name):
     with open(name, encoding="utf-8") as f:
@@ -697,9 +685,10 @@ def load_data_from_final_json(db, name):
                 stock = 0))
         db.add_books(books)
 
+
 if __name__ == "__main__":
     with Database() as db:
-        #load_data_from_final_json(db, "final.json")
+        # load_data_from_final_json(db, "final.json")
         print(db.get_minbook(141))
         '''
         print(db.get_book(Book_Search_Query(id=141, title="cand")))
