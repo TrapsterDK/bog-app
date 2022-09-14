@@ -5,6 +5,7 @@ import time
 import json
 from enum import Enum
 from typing import Callable
+from os.path import exists
 
 
 @dataclass
@@ -96,7 +97,7 @@ class sort_by(Enum):
     title_asc =         ("books.title",         "ASC",  "LAST")
 
 
-_DEFAULT_SORT_BY = sort_by.product_code_asc
+_DEFAULT_SORT_BY = sort_by.product_code_desc
 _DEFAULT_SEARH_LIMIT = 75
 
 _SQL_SELECT_MINBOOK = """
@@ -165,8 +166,8 @@ _SQL_WHERE_QUERY = """
 WHERE ((?1) IS NULL OR instr(LOWER(books.title), LOWER(?1)) > 0)
 AND   ((?2) IS NULL OR instr(LOWER(author.name), LOWER(?2)) > 0)
 AND   ((?3) IS NULL OR instr(LOWER(genre.name), LOWER(?3)) > 0)
-AND   ((?4) IS NULL OR instr(LOWER(books.product_code), LOWER(?4)) > 0)
-ORDER BY {} {} NULLS {}
+AND   ((?4) IS NULL OR instr(books.product_code, (?4)) > 0)
+ORDER BY {} COLLATE NOCASE {} NULLS {}
 LIMIT (?) OFFSET (?)
 """
 
@@ -228,7 +229,7 @@ class Database(object):
             isbn13 INTEGER,
             language_id INTEGER,
             model INTEGER,
-            title TEXT NOT NULL,
+            title TEXT NOT NULL, 
             pages INTEGER,
             price INTEGER,
             product_code INTEGER,
@@ -368,7 +369,7 @@ class Database(object):
             
         self.cur.execute("""CREATE TABLE IF NOT EXISTS genre(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE
+            name TEXT NOT NULL UNIQUE 
             )""")
             
         self.cur.execute("""CREATE TABLE IF NOT EXISTS transactions(
@@ -687,8 +688,11 @@ def load_data_from_final_json(db, name):
 
 
 if __name__ == "__main__":
+    exist = not exists('database.db')
     with Database() as db:
-        # load_data_from_final_json(db, "final.json")
+        if(exist):
+            load_data_from_final_json(db, "final.json")
+
         print(db.get_minbook(141))
         '''
         print(db.get_book(Book_Search_Query(id=141, title="cand")))
