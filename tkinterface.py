@@ -6,6 +6,9 @@ from database import *
 #class for tkinter app
 class App(tk.Tk):
     none_item = "**Ukendt**"
+    #sort by option
+    sort_by_options =       ["Titel A-Å", "Titel Å-A", "Forfatter A-Å", "Forfatter Å-A", "Genre A-Å", "Genre Å-A", "Produktkode stigende", "Produktkode faldende          "]
+    sort_by_to_options =    [sort_by.title_asc, sort_by.title_desc, sort_by.author_asc, sort_by.author_desc, sort_by.genre_asc, sort_by.genre_desc, sort_by.product_code_asc, sort_by.product_code_desc]
 
     def __init__(self, db_name="database.db"):
         super().__init__()
@@ -18,7 +21,7 @@ class App(tk.Tk):
         self.left_frame = tk.Frame(self)
         self.left_frame.pack(side=tk.LEFT, fill=tk.Y)
         self.right_frame = tk.Frame(self)
-        self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx= (10,0), pady=(0,7))
+        self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx= (8,0), pady=(0,7))
 
         self.search_frame = tk.Frame(self.right_frame)
         self.search_frame.pack(side=tk.TOP, fill=tk.X, padx=(0, 17), pady=(0, 6)) # 17 chosen to make scrollbar fit
@@ -29,6 +32,11 @@ class App(tk.Tk):
         self.search_top_frame.pack(side=tk.TOP, fill=tk.X)
         self.search_bottom_frame = tk.Frame(self.search_frame)
         self.search_bottom_frame.pack(side=tk.BOTTOM, fill=tk.X) 
+
+        self.search_top_left_frame = tk.Frame(self.search_top_frame)
+        self.search_top_left_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.search_top_right_frame = tk.Frame(self.search_top_frame)
+        self.search_top_right_frame.pack(side=tk.RIGHT, fill=tk.X)
 
 
         #create button
@@ -77,22 +85,23 @@ class App(tk.Tk):
         #allow only numbers for product code
         self.search_bars[3].configure(validate=tk.ALL, validatecommand=((self.register(self._entry_restrict_numbers)), '%P'))
 
-        #add search title in top search frame
-        search_title = tk.Label(self.search_top_frame, text="Søg efter bøger", font='Helvetica 15 bold')
-        search_title.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        #sort by option
-        sort_by_options = []
-
         #variable for sort by option
         self.sort_by = tk.StringVar()
-        self.sort_by.set(sort_by_options[0])   
+        self.sort_by.set(self.sort_by_options[0])   
         self.sort_by.trace_add("write", self.search)
         
         #menu
-        self.w = tk.OptionMenu(self.search_top_frame, self.sort_by, *sort_by_options)
-        self.w.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+        sort_optionmenu = tk.OptionMenu(self.search_top_right_frame, self.sort_by, *self.sort_by_options)
+        sort_optionmenu.config(width=25)
+        sort_optionmenu.pack(side=tk.RIGHT, fill=tk.X)
 
+        #add search title
+        search_title = tk.Label(self.search_top_left_frame, text="Søg efter bøger", font='Helvetica 15 bold')
+        search_title.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        #optionmenu text
+        sort_by_label = tk.Label(self.search_top_right_frame, text="Sorter efter: ", font='Helvetica 12')
+        sort_by_label.pack(side=tk.LEFT, fill=tk.X)
 
         #populate treeview
         self.populate_tree()
@@ -105,7 +114,7 @@ class App(tk.Tk):
 
     def populate_tree(self, search: Book_Search_Query=Book_Search_Query()):
         self.tree.delete(*self.tree.get_children())
-        for book in self.db.get_minbooks(search):
+        for book in self.db.get_minbooks(search, self.sort_by_to_options[self.sort_by_options.index(self.sort_by.get())]):
             self.tree.insert("", tk.END, values=(book.title or self.none_item, book.author or self.none_item, book.genre or self.none_item, book.product_code or self.none_item))
 
     def info(self):
