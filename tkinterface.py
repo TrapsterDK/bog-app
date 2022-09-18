@@ -1,298 +1,380 @@
 from time import sleep
 import tkinter as tk
 from tkinter import ttk
+from typing import Any
 from database import *
 
-# entry with placeholder, and proper get and write callbacks
+# entry with placeholder
 class EntryWithPlaceholder(tk.Entry):
-    def __init__(self, master, placeholder, textvariable = None, color='grey', **kwargs):
-        if textvariable is None:
-            self.textvariable = tk.StringVar()
-        else:
-            self.textvariable = textvariable
+    def __init__(self, master, placeholder, sv = None, color='grey', **kwargs):
+        if sv is None:
+            sv = tk.StringVar()
 
-        super().__init__(master, textvariable=self.textvariable, **kwargs)
+        super().__init__(master, textvariable=sv, **kwargs)
 
-        self.placeholder = placeholder
-        self.placeholder_color = color
-        self.default_color = self['fg']
+        self.sv = sv
+        self._placeholder_text = placeholder
+        self._placeholder_color = color
+        self._default_color = self['fg']
 
         self.bind("<FocusIn>", self._foc_in)
         self.bind("<FocusOut>", self._foc_out)
 
         self._foc_out()
 
-    def _foc_in(self, *args):
-        if self['fg'] != self.placeholder_color:
+    # delete placeholder on focus
+    def _foc_in(self, *args) -> None:
+        if self['fg'] != self._placeholder_color:
             return
 
+        # deletion done first to prevent extra write callback
         self.delete(0, tk.END)
-        self['fg'] = self.default_color
+        self['fg'] = self._default_color
 
-    def _foc_out(self, *args):
+    # add placeholder if no text
+    def _foc_out(self, *args)  -> None:
         if self.get():
             return
 
-        self['fg'] = self.placeholder_color
-        self.textvariable.set(self.placeholder)
+        # background set first to prevent wrong validation
+        self['fg'] = self._placeholder_color
+        self.insert(0, self._placeholder_text)
 
-    def get(self):
-        if self['fg'] == self.placeholder_color:
+    # get value while preventing get placholder
+    def get(self) -> str:
+        if self['fg'] == self._placeholder_color:
             return None
         
-        return self.textvariable.get()
+        return self.sv.get()
 
-    def _write_callback(self, *args):
-        print(args)
-        if self['fg'] == self.placeholder_color:
+    # prevent write event to fire when it is just placeholder being written
+    def _write_callback(self, *args) -> None:
+        if self['fg'] == self._placeholder_color:
             return
         
-        self.write_callback_original(args)
+        self._write_callback_original(args)
 
-    def trace_add(self, mode, callback):
+    # add trace callback
+    def sv_trace_add(self, mode: Any, callback: Callable) -> str:
         if(mode == 'write'):
-            self.write_callback_original = callback
-            return self.textvariable.trace_add(mode, self._write_callback)
+            self._write_callback_original = callback
+            return self.sv.trace_add(mode, self._write_callback)
             
-        return self.textvariable.trace_add(mode, callback)
+        return self.sv.trace_add(mode, callback)
+    
+    # set validation callback
+    def validate(self, callback: Callable) -> None:
+        self._validate_callback = callback
+        self.configure(validate=tk.ALL, validatecommand=(self.register(self._validate), '%P'))
+
+    # prevent validating when it is just placeholder being written
+    def _validate(self, P: str) -> bool:
+        if self['fg'] == self._placeholder_color:
+            return True
+
+        return self._validate_callback(P)
+
+
+_MORE = 0
+_EVEN = 1
+_ODD = 2
+_HIGHLIGHT = 3
+_LATE = 0
+_MORE_TEXT = -1
+_MORE_VALUES = ("Inlæs flere bøger", "-")
+# table with alternating row colors, hover effect, heading sort by callback
+class FancyTable(ttk.Treeview):
+    def __init__(self, master, columns, load_more_callback: Callable, sort_by_callback: Callable, more_color = "#909090", even_row_color = "#DFDFDF", odd_row_color = "#ffffff", **kwargs):
+        super().__init__(master, columns=columns, **kwargs)
+
+        self.columns: list[str] = columns
+        self._load_more_callback = load_more_callback
+
+        # create headers
+        for column in columns:
+            # command on click of header call sort_by_callback
+            self.heading(column, text=column, command = lambda c=column: sort_by_callback(c))
+            self.column(column, width=1)
+
+        #colors for tags
+        self.tag_configure(_MORE, background= more_color)
+        self.tag_configure(_EVEN, background= even_row_color)
+        self.tag_configure(_ODD, background=  odd_row_color)
+        self.tag_configure(_HIGHLIGHT, background='lightblue')
+
+        # hover highlight
+        self.add_bindtag(2, _LATE)
+        self.bind_class(_LATE, "<MouseWheel>", self._hover_highlight)
+        self.bind_class(_LATE, '<Enter>', self._hover_highlight)
+        self.bind("<Motion>", self._hover_highlight)
+        self.bind('<Leave>', self._hover_highlight)
+
+        # load more
+        self.bind("<<TreeviewSelect>>", self._select)
+    
+    # get color based on row index position in tree
+    def _row_color(self, index: int) -> int:
+        return (_EVEN if index%2==0 else _ODD)
+
+    _prev_hover_iid = None
+    # highligthing of rows on hover, misses by one on start
+    def _hover_highlight(self, event: tk.Event) -> None:
+        # if leave mouse, remove highlight
+        if(event.type == tk.EventType.Leave):
+            self.item(self._prev_hover_iid, tags=self._row_color(self.index(self._prev_hover_iid)))
+            self._prev_hover_iid = None
+            return
+
+        iid = self.identify_row(event.y)
+
+        if iid == self._prev_hover_iid:
+            return
+        
+        # set color
+        self.item(iid, tags=_HIGHLIGHT)
+
+        # remove color from previous
+        if self._prev_hover_iid and self.exists(self._prev_hover_iid):
+            if(self.item(self._prev_hover_iid)['text'] == _MORE_TEXT):
+                self.item(self._prev_hover_iid, tags=(_MORE,))
+            else:
+                self.item(self._prev_hover_iid, tags=self._row_color(self.index(self._prev_hover_iid)))
+
+        self._prev_hover_iid = iid
+
+    # adds a bindtag at a given position
+    def add_bindtag(self, pos: int, tag: Any) -> None:
+        new_bind_tags = list(self.bindtags())
+        new_bind_tags.insert(pos, tag)
+        self.bindtags(new_bind_tags)
+
+    # load more if selected more row
+    def _select(self, *args) -> None:   
+        selection = self.selection()
+        if selection and self.item(selection[-1])['text'] == _MORE_TEXT:
+            self._load_more_callback()
+
+    # add list of rows, dont use insert
+    def add_rows(self, text: list[str], values: list[tuple[str | int, ...]], more: bool, delete_existing_rows: bool = False) -> None:
+        if len(self.get_children()): 
+            if delete_existing_rows: # remove all rows
+                self.yview_moveto(0)
+                self.delete(*self.get_children())
+            else: # remove more row
+                self.delete(self.get_children()[-1])
+
+        index = len(self.get_children())
+
+        # add rows
+        for i, (t, v) in enumerate(zip(text, values)):
+            self.insert('', index + i, values=v, text=t, tags=self._row_color(index + i))
+        
+        # load more
+        if more:
+            more_values = [_MORE_VALUES[0]] + [_MORE_VALUES[1]] * (len(values[0])-1)
+            self.insert("", index + len(values), text=_MORE_TEXT, values=more_values, tags=(_MORE,))
+        
+        # check to see if refresh of highlight is needed
+        if not self.winfo_ismapped():
+            return
+
+        self.event_generate("<Motion>",
+            x=self.winfo_pointerx() - self.winfo_rootx(), 
+            y=self.winfo_pointery() - self.winfo_rooty())
 
 
 #class for tkinter app
+TITLE = "Bog butik"
 class App(tk.Tk):
     none_item = "**Ukendt**"
-    more_text = -1
     tree_load = 50
-    #sort by option
-    sort_by_options =       ["Titel A-Z", "Titel Z-A", "Forfatter A-Z", "Forfatter Z-A", "Genre A-Z", "Genre Z-A", "Produktkode stigende", "Produktkode faldende"]
-    columns =               ("Titel", "Forfatter", "Genre", "Produktkode")
-    sort_by_to_options =    [sort_by.title_asc, sort_by.title_desc, sort_by.author_asc, sort_by.author_desc, sort_by.genre_asc, sort_by.genre_desc, sort_by.product_code_asc, sort_by.product_code_desc]
+
+    columns =           ("Titel", "Forfatter", "Genre", "Produktkode")
+    sort_by_options =   ["Titel A-Z", "Titel Z-A", "Forfatter A-Z", "Forfatter Z-A", "Genre A-Z", "Genre Z-A", "Produktkode stigende", "Produktkode faldende"]
+    sort_by_values =    [sort_by.title_asc, sort_by.title_desc, sort_by.author_asc, sort_by.author_desc, sort_by.genre_asc, sort_by.genre_desc, sort_by.product_code_asc, sort_by.product_code_desc]
 
     def __init__(self, db_name="database.db"):
         super().__init__()
+
         self.db = Database(db_name)
-        self.title("Bog butik")
+        self.title(TITLE)
         self.geometry("800x600")
-        self.create_widgets()
 
-    def create_widgets(self):
-        self.left_frame = tk.Frame(self)
-        self.left_frame.pack(side=tk.LEFT, fill=tk.Y)
-        self.right_frame = tk.Frame(self)
-        self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx= (8,0), pady=(0,7))
+        self._create_widgets()
 
-        self.search_frame = tk.Frame(self.right_frame)
-        self.search_frame.pack(side=tk.TOP, fill=tk.X, padx=(0, 17), pady=(0, 6)) # 17 chosen to make scrollbar fit
-        self.tree_frame = tk.Frame(self.right_frame)
-        self.tree_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+    def _create_widgets(self):
+        self._left_frame = tk.Frame(self)
+        self._left_frame.pack(side=tk.LEFT, fill=tk.Y)
+        self._right_frame = tk.Frame(self)
+        self._right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx= (8,0), pady=(0,7))
+
+        self._search_frame = tk.Frame(self._right_frame)
+        self._search_frame.pack(side=tk.TOP, fill=tk.X, padx=(0, 17), pady=(0, 6)) # 17 chosen to make scrollbar fit
+        self._tree_frame = tk.Frame(self._right_frame)
+        self._tree_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         
-        self.search_top_frame = tk.Frame(self.search_frame)
-        self.search_top_frame.pack(side=tk.TOP, fill=tk.X)
-        self.search_bottom_frame = tk.Frame(self.search_frame)
-        self.search_bottom_frame.pack(side=tk.BOTTOM, fill=tk.X) 
+        self._search_top_frame = tk.Frame(self._search_frame)
+        self._search_top_frame.pack(side=tk.TOP, fill=tk.X)
+        self._search_bottom_frame = tk.Frame(self._search_frame)
+        self._search_bottom_frame.pack(side=tk.BOTTOM, fill=tk.X) 
 
-        self.search_top_left_frame = tk.Frame(self.search_top_frame)
-        self.search_top_left_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.search_top_right_frame = tk.Frame(self.search_top_frame)
-        self.search_top_right_frame.pack(side=tk.RIGHT, fill=tk.X)
-
+        self._search_top_left_frame = tk.Frame(self._search_top_frame)
+        self._search_top_left_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self._search_top_right_frame = tk.Frame(self._search_top_frame)
+        self._search_top_right_frame.pack(side=tk.RIGHT, fill=tk.X)
 
         #create button
-        self.info_button = tk.Button(self.left_frame, text="Info", command=self.info)
-        self.add_button = tk.Button(self.left_frame, text="Tilføj", command=self.add_book)
-        self.delete_button = tk.Button(self.left_frame, text="Slet", command=self.delete_book)
-        self.update_button = tk.Button(self.left_frame, text="Opdater", command=self.update_book)
+        self._info_button = tk.Button(self._left_frame, text="Info", command=self._info)
+        self._add_button = tk.Button(self._left_frame, text="Tilføj", command=self._add_book)
+        self._delete_button = tk.Button(self._left_frame, text="Slet", command=self._delete_book)
+        self._update_button = tk.Button(self._left_frame, text="Opdater", command=self._update_book)
 
-        self.info_button.pack()
-        self.add_button.pack()
-        self.delete_button.pack()
-        self.update_button.pack()
-
-        #create treeview
-        self.tree = ttk.Treeview(self.tree_frame, columns=self.columns, show='headings', name='tree')
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH,  expand=True)
-
-        #colors for tags
-        self.tree.tag_configure("more", background="#B3B3B3")
-        self.tree.tag_configure("#f2f", background="#f2f2f2")
-        self.tree.tag_configure("#fff", background="#ffffff")
-
-        self.tree.tag_configure('highlight', background='lightblue')
-        self.tree.bind("<Motion>", self.highlight_row)
-
-        #get late event after has treeview has scrollled and enter
-        self.tree_add_bindtag(2, "Late")
-        self.tree.bind_class("Late", "<MouseWheel>", self.highlight_row)
-        self.tree.bind_class("Late", '<Enter>', self.highlight_row)
-
-        self.tree.bind('<Leave>', self.highlight_row)
-
-        #input 
-        self.tree.bind("<<TreeviewSelect>>", self.tree_select)
-
-        #create scrollbar
-        vsb = ttk.Scrollbar(self.tree_frame, orient="vertical", command=self.tree.yview)
-        vsb.pack(side=tk.RIGHT, fill=tk.Y)
-
-        self.tree.configure(yscrollcommand=vsb.set)
-
-        #create search bar list
-        self.search_bars = []
-
-        #create columns
-        for column in self.columns:
-            self.tree.heading(column, text=column, command = lambda c=column: self.tree_sort_by(c))
-            self.tree.column(column, width=1)
-            
-            search_bar = EntryWithPlaceholder(self.search_bottom_frame, "Søg " + column.lower(), width=1)
-            search_bar.trace_add("write", self.tree_search)
-            search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-            self.search_bars.append(search_bar)
-
-        #allow only numbers for product code
-        self.search_bars[3].configure(validate=tk.ALL, validatecommand=((self.register(self._entry_restrict_numbers)), '%P'))
-
-        #variable for sort by option
-        self.sort_by = tk.StringVar()
-        self.sort_by.set(self.sort_by_options[0])   
-        self.sort_by.trace_add("write", self.tree_search)
-        
-        #menu
-        sort_optionmenu = tk.OptionMenu(self.search_top_right_frame, self.sort_by, *self.sort_by_options)
-        sort_optionmenu.config(width=25)
-        sort_optionmenu.pack(side=tk.RIGHT, fill=tk.X)
+        self._info_button.pack()
+        self._add_button.pack()
+        self._delete_button.pack()
+        self._update_button.pack()
 
         #add search title
-        search_title = tk.Label(self.search_top_left_frame, text="Bøger", font='Helvetica 15 bold')
+        search_title = tk.Label(self._search_top_left_frame, text="Bøger", font='Helvetica 15 bold')
         search_title.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         #optionmenu text
-        sort_by_label = tk.Label(self.search_top_right_frame, text="Sorter efter: ", font='Helvetica 12')
+        sort_by_label = tk.Label(self._search_top_right_frame, text="Sorter efter: ", font='Helvetica 12')
         sort_by_label.pack(side=tk.LEFT, fill=tk.X)
 
-        self.tree_select()
-        self.tree_add()
+        self._create_sortmenu()
+        self._create_searchbars()
+        self._create_table()
 
-    def _entry_restrict_numbers(self, P):
-        print(P)
+
+    def _create_sortmenu(self):
+        # variable for sort by option
+        self.sort_by = tk.StringVar()
+        self.sort_by.set(self.sort_by_options[0])   
+        self.sort_by.trace_add("write", self._tree_set_rows)
+        
+        # menu
+        sort_optionmenu = tk.OptionMenu(self._search_top_right_frame, self.sort_by, *self.sort_by_options)
+        sort_optionmenu.config(width=25)
+        sort_optionmenu.pack(side=tk.RIGHT, fill=tk.X)
+
+    def _create_table(self):
+        # create treeview
+        self._tree = FancyTable(self._tree_frame, columns=self.columns, load_more_callback=self._tree_add_rows, sort_by_callback=self._tree_sort_by_coloumn, show='headings')
+        self._tree.pack(side=tk.LEFT, fill=tk.BOTH,  expand=True)
+
+        # select rows 
+        self._tree.bind("<<TreeviewSelect>>", self._tree_on_select, add="+")
+
+        # create scrollbar for treeview
+        vsb = ttk.Scrollbar(self._tree_frame, orient="vertical", command=self._tree.yview)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self._tree.configure(yscrollcommand=vsb.set)
+        
+        # refresh treeview
+        self._tree_on_select()
+        self._tree_add_rows()
+
+    def _create_searchbars(self):
+        # create search bar list
+        self._search_bars = []
+
+        # search bar for each coloumn
+        for column in self.columns:
+            search_bar = EntryWithPlaceholder(self._search_bottom_frame, "Søg " + column.lower(), width=1)
+            search_bar.sv_trace_add("write", self._tree_set_rows)
+            search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+            self._search_bars.append(search_bar)
+
+        #allow only numbers for product code
+        self._search_bars[3].validate(self._validate_integer)
+
+    @staticmethod   
+    def _validate_integer(P: str):
         if P.isdigit() or P == "":
             return True
         else:
             return False
 
-    def info(self):
+    def _info(self):
         pass
 
-    def add_book(self):
+    def _add_book(self):
         pass
 
-    def delete_book(self):
+    def _delete_book(self):
         pass
 
-    def update_book(self):
+    def _update_book(self):
         pass
 
-    def tree_add_bindtag(self, pos, tag):
-        new_bind_tags = list(self.tree.bindtags())
-        new_bind_tags.insert(pos, tag)
-        self.tree.bindtags(new_bind_tags)
-        
-    #misses by one on start
-    prev_hover_iid = None
-    def highlight_row(self, event):
-        print(event)
-        tree = event.widget
+    # sort by coloumn callback when tree header is clicked, set sort_by optionmenu to the clicked coloumn
+    def _tree_sort_by_coloumn(self, coloumn: str) -> None:
+        column_index = self.columns.index(coloumn)*2
+        optionmenu_index = self.sort_by_options.index(self.sort_by.get())
 
-        if(event.type == tk.EventType.Leave):
-            tree.item(self.prev_hover_iid, tags=self._line_color(tree.index(self.prev_hover_iid)))
-            self.prev_hover_iid = None
-            return
+        value = self.sort_by_options[column_index+1 if column_index == optionmenu_index else column_index]
 
-        iid = tree.identify_row(event.y)
+        self.sort_by.set(value)   
 
-        if iid == self.prev_hover_iid:
-            return
-        
-        tree.item(iid, tags="highlight")
-
-        if self.prev_hover_iid and tree.exists(self.prev_hover_iid):
-            tree.item(self.prev_hover_iid, tags=self._line_color(tree.index(self.prev_hover_iid)))
-
-        self.prev_hover_iid = iid
-
-    def tree_sort_by(self, column):
-        column_index = self.columns.index(column)*2
-        
-        if (self.sort_by_options[column_index] == self.sort_by.get()):
-            self.sort_by.set(self.sort_by_options[column_index + 1])
-            return
-
-        self.sort_by.set(self.sort_by_options[column_index])
-
-    def tree_select(self, *args):
-        selection = self.tree.selection()
-        if selection and self.tree.item(selection[-1])['text'] == self.more_text:
-            self.tree_add()
+    def _tree_on_select(self, *args) -> None:
+        selection = self._tree.selection()
         
         #button disable enable
         match len(selection):
             case 0:
-                self.info_button['state'] = tk.DISABLED
-                self.add_button['state'] = tk.NORMAL
-                self.delete_button['state'] = tk.DISABLED
-                self.update_button['state'] = tk.DISABLED
+                self._info_button['state'] = tk.DISABLED
+                self._add_button['state'] = tk.NORMAL
+                self._delete_button['state'] = tk.DISABLED
+                self._update_button['state'] = tk.DISABLED
             case 1:
-                self.info_button['state'] = tk.NORMAL
-                self.add_button['state'] = tk.NORMAL
-                self.delete_button['state'] = tk.NORMAL
-                self.update_button['state'] = tk.NORMAL
+                self._info_button['state'] = tk.NORMAL
+                self._add_button['state'] = tk.NORMAL
+                self._delete_button['state'] = tk.NORMAL
+                self._update_button['state'] = tk.NORMAL
             case _:
-                self.info_button['state'] = tk.DISABLED
-                self.add_button['state'] = tk.NORMAL
-                self.delete_button['state'] = tk.NORMAL
-                self.update_button['state'] = tk.DISABLED
-        
-    def tree_add(self, *args):
-        children = self.tree.get_children()
+                self._info_button['state'] = tk.DISABLED
+                self._add_button['state'] = tk.NORMAL
+                self._delete_button['state'] = tk.NORMAL
+                self._update_button['state'] = tk.DISABLED
 
-        if children:
-            self.tree.delete(children[-1])
+    # delete current rows and add new ones
+    def _tree_set_rows(self, *args) -> None:
+        self._tree_add_rows(True)
 
-        self.tree_populate()
-
-    def tree_search(self, *args):
-        self.tree.delete(*self.tree.get_children())
-        self.tree.yview_moveto(0)
-        self.tree_populate()
-
-    def _line_color(self, index):
-        if (index == len(self.tree.get_children()) - 1):
-            return ("more", )
-        return ("#f2f" if index%2==0 else "#fff", )
-
-    def tree_populate(self):
+    # adds rows to tree with choice to delete current rows
+    def _tree_add_rows(self, delete_children: bool = False) -> None:
+        # search query
         search = Book_Search_Query(
-            title=self.search_bars[0].get() or None, 
-            author=self.search_bars[1].get() or None, 
-            genre=self.search_bars[2].get() or None, 
-            product_code=self.search_bars[3].get() or None)
+            title=self._search_bars[0].get() or None, 
+            author=self._search_bars[1].get() or None, 
+            genre=self._search_bars[2].get() or None, 
+            product_code=self._search_bars[3].get() or None)
 
-        for i, book in enumerate(
-            self.db.get_minbooks(   
-                search, 
-                self.sort_by_to_options[self.sort_by_options.index(self.sort_by.get())], 
-                limit=self.tree_load, offset=len(self.tree.get_children())), 
-            start=len(self.tree.get_children()) + 1):
+        # sql query
+        books = self.db.get_minbooks(   
+            search, 
+            self.sort_by_values[self.sort_by_options.index(self.sort_by.get())], 
+            limit=self.tree_load+1, 
+            offset=0 if delete_children else len(self._tree.get_children()))
 
-            self.tree.insert("", tk.END, text = book.id, values = (book.title or self.none_item, book.author or self.none_item, book.genre or self.none_item, book.product_code or self.none_item), tags=(self._line_color(i), ))
+        # check if are more books to load
+        more_books = len(books) > self.tree_load
 
-        self.tree.insert("", tk.END, text=self.more_text,  value=("Inlæs flere bøger", "-", "-", "-"), tags=("more", ))
-        
-        # use x and y coordinates based on self.tree mouse position
-        if self.tree.winfo_ismapped():
-            self.tree.event_generate("<Motion>",
-                x=self.tree.winfo_pointerx() - self.tree.winfo_rootx(), 
-                y=self.tree.winfo_pointery() - self.tree.winfo_rooty())
+        # remove last book as we loaded one to much to detect if there are more books
+        if more_books:
+            books = books[:-1]
+
+        # add to tree
+        self._tree.add_rows(
+            text = [book.id for book in books], 
+            values = ( [(book.title or self.none_item, ', '.join(book.authors) if book.authors else self.none_item, 
+                        book.genre or self.none_item, book.product_code or self.none_item)
+                        for book in books]),
+            more = more_books,
+            delete_existing_rows = delete_children)
 
 
 if __name__ == "__main__":
