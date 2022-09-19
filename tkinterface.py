@@ -113,15 +113,22 @@ class FancyTable(ttk.Treeview):
         self.bind("<<TreeviewSelect>>", self._select)
     
     # get color based on row index position in tree
-    def _row_color(self, index: int) -> int:
+    def _row_color_index(self, index: int) -> int:
         return (_EVEN if index%2==0 else _ODD)
+        
+    # set color based in iid
+    def _set_row_color_iid(self, iid: int) -> int:
+        if(self.item(iid)['text'] == _MORE_TEXT):
+            self.item(iid, tags=(_MORE,))
+        else:
+            self.item(iid, tags=self._row_color_index(self.index(iid)))
 
     _prev_hover_iid = None
     # highligthing of rows on hover, misses by one on start
     def _hover_highlight(self, event: tk.Event) -> None:
         # if leave mouse, remove highlight
         if(event.type == tk.EventType.Leave):
-            self.item(self._prev_hover_iid, tags=self._row_color(self.index(self._prev_hover_iid)))
+            self._set_row_color_iid(self._prev_hover_iid)
             self._prev_hover_iid = None
             return
 
@@ -135,10 +142,7 @@ class FancyTable(ttk.Treeview):
 
         # remove color from previous
         if self._prev_hover_iid and self.exists(self._prev_hover_iid):
-            if(self.item(self._prev_hover_iid)['text'] == _MORE_TEXT):
-                self.item(self._prev_hover_iid, tags=(_MORE,))
-            else:
-                self.item(self._prev_hover_iid, tags=self._row_color(self.index(self._prev_hover_iid)))
+            self._set_row_color_iid(self._prev_hover_iid)
 
         self._prev_hover_iid = iid
 
@@ -155,7 +159,7 @@ class FancyTable(ttk.Treeview):
             self._load_more_callback()
 
     # add list of rows, dont use insert
-    def add_rows(self, text: list[str], values: list[tuple[str | int, ...]], more: bool, delete_existing_rows: bool = False) -> None:
+    def add_rows(self, text: list[str], values: list[tuple[Any, ...]], more: bool, delete_existing_rows: bool = False) -> None:
         if len(self.get_children()): 
             if delete_existing_rows: # remove all rows
                 self.yview_moveto(0)
@@ -167,7 +171,7 @@ class FancyTable(ttk.Treeview):
 
         # add rows
         for i, (t, v) in enumerate(zip(text, values)):
-            self.insert('', index + i, values=v, text=t, tags=self._row_color(index + i))
+            self.insert('', index + i, values=v, text=t, tags=self._row_color_index(index + i))
         
         # load more
         if more:
