@@ -283,6 +283,7 @@ class App(tk.Tk):
         self._tree_on_select()
         self._tree_add_rows()
 
+
     def _create_searchbars(self):
         # create search bar list
         self._search_bars = []
@@ -309,7 +310,47 @@ class App(tk.Tk):
         pass
 
     def _add_book(self):
-        pass
+        add_menu = tk.Toplevel(self)
+        add_menu.geometry("200x140")
+        add_menu.resizable(False, False)
+        add_menu_vframe = tk.Frame(add_menu)
+        add_menu_hframe = tk.Frame(add_menu)
+
+        #entrys
+        self.add_titel_entry = tk.Entry(add_menu_hframe)
+        self.add_forfatter_entry = tk.Entry(add_menu_hframe)
+        self.add_genre_entry = tk.Entry(add_menu_hframe)
+        self.add_pris_entry = tk.Entry(add_menu_hframe)
+        self.add_lager_entry = tk.Entry(add_menu_hframe)  
+        annuler = tk.Button(add_menu_hframe, text = "afslut", command = add_menu.withdraw)
+        gem = tk.Button(add_menu_hframe, text = "gem", command = self.add_book)
+
+        self.add_titel_entry.pack(side = tk.TOP, pady = 1)
+        self.add_forfatter_entry.pack(side = tk.TOP, pady = 1)
+        self.add_genre_entry.pack(side = tk.TOP, pady = 1)
+        self.add_pris_entry.pack(side = tk.TOP, pady = 1)
+        self.add_lager_entry.pack(side = tk.TOP, pady = 1) 
+        gem.pack(side = tk.RIGHT, pady = 4, anchor = tk.NE)
+        annuler.pack(side = tk.RIGHT, padx = 10, pady = 4, anchor = tk.NE)
+
+        #text
+        self.titel_label = tk.Label(add_menu_vframe, text = "titel: ")  
+        self.forfatter_label = tk.Label(add_menu_vframe, text = "forfatter: ") 
+        self.genre_label = tk.Label(add_menu_vframe, text = "genre: ") 
+        self.pris_label = tk.Label(add_menu_vframe, text = "pris: ")
+        self.lager_label = tk.Label(add_menu_vframe, text = "lager: ")  
+
+        self.titel_label.pack(side = tk.TOP, anchor=tk.NW)
+        self.forfatter_label.pack(side = tk.TOP, anchor=tk.NW)
+        self.genre_label.pack(side = tk.TOP, anchor=tk.NW)
+        self.pris_label.pack(side = tk.TOP, anchor=tk.NW)
+        self.lager_label.pack(side = tk.TOP, anchor=tk.NW)
+
+       
+        #add_menu.mainloop()
+        add_menu_vframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = tk.FALSE)
+        add_menu_hframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = tk.FALSE)
+        
 
     def _delete_book(self):
         pass
