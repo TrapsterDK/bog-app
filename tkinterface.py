@@ -234,7 +234,7 @@ class App(tk.Tk):
         self._info_button = tk.Button(self._buttons_frame, text="Info", command=self._info, width=15, height=2)
         self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=self._add_book, width=15, height=2)
         self._delete_button = tk.Button(self._buttons_frame, text="Slet", command=self._delete_book, width=15, height=2)
-        self._update_button = tk.Button(self._buttons_frame, text="Opdater", command=self._update_book, width=15, height=2)
+        self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=self._update_book, width=15, height=2)
 
         self._info_button.pack(pady=2)
         self._add_button.pack(pady=2)
@@ -357,7 +357,7 @@ class App(tk.Tk):
         search = Book_Search_Query(
             title=self._search_bars[0].get() or None, 
             author=self._search_bars[1].get() or None, 
-            genre=self._search_bars[2].get() or None, 
+            group=self._search_bars[2].get() or None, 
             product_code=self._search_bars[3].get() or None)
 
         # sql query
