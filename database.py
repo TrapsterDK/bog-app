@@ -7,15 +7,12 @@ from enum import Enum
 from typing import Callable, Optional
 from os.path import exists
 
-import sys
-import traceback
-
 
 @dataclass
 class MinBook:
     title:              str
     authors:            Optional[list[str]] = None
-    genre:              Optional[str] = None
+    group:              Optional[str] = None
     product_code:       Optional[int] = None
     id:                 Optional[int] = None
 
@@ -49,7 +46,6 @@ class Book:
     type_:              Optional[str] = None
     university:         Optional[str] = None
     weight:             Optional[int] = None
-    genre:              Optional[str] = None
     id:                 Optional[int] = None
 
 
@@ -57,7 +53,7 @@ def Book_to_MinBook(book: Book) -> MinBook:
     return MinBook(
         title=          book.title,
         authors=        book.authors,
-        genre=          book.genre,
+        group=          book.group,
         product_code=   book.product_code,
         id=             book.id
     )
@@ -67,7 +63,7 @@ def MinBook_to_Book(book_min: MinBook) -> Book:
     return Book(
         title=          book_min.title,
         authors=        book_min.authors,
-        genre=          book_min.genre,
+        group=          book_min.group,
         product_code=   book_min.product_code,
         id=             book_min.id
     )
@@ -77,7 +73,7 @@ def MinBook_to_Book(book_min: MinBook) -> Book:
 class Book_Search_Query:
     title:              Optional[str] = None
     author:             Optional[str] = None
-    genre:              Optional[str] = None
+    group:              Optional[str] = None
     product_code:       Optional[int] = None
 
 
@@ -93,8 +89,8 @@ class Transaction:
 class sort_by(Enum):
     product_code_desc = ("books.product_code",  0)
     product_code_asc =  ("books.product_code",  1)
-    genre_desc =        ("genre.name",          0)
-    genre_asc =         ("genre.name",          1)
+    group_desc =        ("group_.name",          0)
+    group_asc =         ("group_.name",          1)
     author_desc =       ("author.name",         0)
     author_asc =        ("author.name",         1)
     title_desc =        ("books.title",         0)
@@ -107,7 +103,7 @@ SELECT
 books.id,
 books.title,
 group_concat(author.name),
-genre.name,
+group_.name,
 books.product_code"""
 
 
@@ -139,7 +135,7 @@ books.stock"""
 
 
 _SQL_JOIN_MINBOOK = """
-LEFT JOIN genre ON genre.id = books.genre_id
+LEFT JOIN group_ ON group_.id = books.group_id
 
 LEFT JOIN book_author ON books.id = book_author.book_id
 LEFT JOIN author ON book_author.author_id = author.id
@@ -151,7 +147,6 @@ LEFT JOIN binding ON binding.id = books.binding_id
 LEFT JOIN brand ON brand.id = books.brand_id
 LEFT JOIN editor ON editor.id = books.editor_id
 LEFT JOIN exam ON exam.id = books.exam_id
-LEFT JOIN group_ ON group_.id = books.group_id
 LEFT JOIN imprint ON imprint.id = books.imprint_id
 LEFT JOIN language ON language.id = books.language_id
 LEFT JOIN month ON month.id = books.publication_month_id
@@ -186,7 +181,7 @@ WHERE """ + "\nAND ".join(
         enumerate([
             (_sql_instr_str, "books.title"),
             (_sql_instr_str, "author.name"),
-            (_sql_instr_str, "genre.name"),
+            (_sql_instr_str, "group_.name"),
             (_sql_instr_int, "books.product_code")], 
         start=1)]) + """
         
@@ -300,7 +295,7 @@ class Database(object):
             id =                row[0],
             title =             row[1],
             authors =           row[2].split(',') if row[2] else None,
-            genre =             row[3],
+            group =             row[3],
             product_code =      row[4]
         )
 
@@ -366,7 +361,6 @@ class Database(object):
             type_id INTEGER,
             university_id INTEGER,  
             weight INTEGER,
-            genre_id INTEGER,
             stock INTEGER,
 
             FOREIGN KEY (binding_id)
@@ -415,10 +409,6 @@ class Database(object):
                 ON DELETE SET NULL,
             FOREIGN KEY (university_id)
                 REFERENCES university (id)
-                ON UPDATE CASCADE
-                ON DELETE SET NULL,
-            FOREIGN KEY (genre_id)
-                REFERENCES genre (id)
                 ON UPDATE CASCADE
                 ON DELETE SET NULL
             )""")
@@ -502,11 +492,6 @@ class Database(object):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE
             )""")
-            
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS genre(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE 
-            )""")
 
         #many to many
         self.cur.execute("""CREATE TABLE IF NOT EXISTS book_author(
@@ -559,9 +544,8 @@ class Database(object):
                 type_id,
                 university_id,
                 weight,
-                genre_id,
                 stock
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
                 book.age,
                 self._insert_or_ignore("binding", "name", book.binding),
                 self._insert_or_ignore("brand", "name", book.brand),
@@ -587,7 +571,6 @@ class Database(object):
                 self._insert_or_ignore("type", "name", book.type_),
                 self._insert_or_ignore("university", "name", book.university),
                 book.weight,
-                self._insert_or_ignore("genre", "name", book.genre),
                 book.stock))
 
             book_id = self.cur.lastrowid
@@ -622,7 +605,7 @@ class Database(object):
     def _get_books_query(self, sql_query: str, query: Book_Search_Query, sort: sort_by, limit: int, offset: int, row_to_book: Callable) -> list[Book | MinBook]:
         #execute query
         self.cur.execute(sql_query.format(sort.value[0], *(("ASC", "LAST") if sort.value[1] == 1 else ("DESC", "FIRST"))), 
-            (query.title, query.author, query.genre, query.product_code, limit, offset))
+            (query.title, query.author, query.group, query.product_code, limit, offset))
             
         return [row_to_book(row) for row in self.cur]
 
@@ -668,7 +651,6 @@ class Database(object):
             type_id = ?,
             university_id = ?,
             weight = ?,
-            genre_id = ?,
             stock = ?
             WHERE id = ?""", (
             book.age,
@@ -696,7 +678,6 @@ class Database(object):
             self._insert_or_ignore("type", "name", book.type_),
             self._insert_or_ignore("university", "name", book.university),
             book.weight,
-            self._insert_or_ignore("genre", "name", book.genre),
             book.stock,
             book.id))
             

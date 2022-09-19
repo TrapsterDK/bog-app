@@ -193,9 +193,9 @@ class App(tk.Tk):
     none_item = "**Ukendt**"
     tree_load = 50
 
-    columns =           ("Titel", "Forfatter", "Genre", "Produktkode")
-    sort_by_options =   ["Titel A-Z", "Titel Z-A", "Forfatter A-Z", "Forfatter Z-A", "Genre A-Z", "Genre Z-A", "Produktkode stigende", "Produktkode faldende"]
-    sort_by_values =    [sort_by.title_asc, sort_by.title_desc, sort_by.author_asc, sort_by.author_desc, sort_by.genre_asc, sort_by.genre_desc, sort_by.product_code_asc, sort_by.product_code_desc]
+    columns =           ("Titel", "Forfatter", "Group", "Produktkode")
+    sort_by_options =   ["Titel A-Z", "Titel Z-A", "Forfatter A-Z", "Forfatter Z-A", "Group A-Z", "Group Z-A", "Produktkode stigende", "Produktkode faldende"]
+    sort_by_values =    [sort_by.title_asc, sort_by.title_desc, sort_by.author_asc, sort_by.author_desc, sort_by.group_asc, sort_by.group_desc, sort_by.product_code_asc, sort_by.product_code_desc]
 
     def __init__(self, db_name="database.db"):
         super().__init__()
@@ -419,7 +419,7 @@ class App(tk.Tk):
         self._tree.add_rows(
             text = [book.id for book in books], 
             values = ( [(book.title or self.none_item, ', '.join(book.authors) if book.authors else self.none_item, 
-                        book.genre or self.none_item, book.product_code or self.none_item)
+                        book.group or self.none_item, book.product_code or self.none_item)
                         for book in books]),
             more = more_books,
             delete_existing_rows = delete_children)
