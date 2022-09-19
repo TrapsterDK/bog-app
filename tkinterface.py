@@ -210,7 +210,10 @@ class App(tk.Tk):
         self._left_frame = tk.Frame(self)
         self._left_frame.pack(side=tk.LEFT, fill=tk.Y)
         self._right_frame = tk.Frame(self)
-        self._right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx= (8,0), pady=(0,7))
+        self._right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, pady=(0,6))
+
+        self._buttons_frame = tk.Frame(self._left_frame)
+        self._buttons_frame.pack(side=tk.LEFT, padx=4)
 
         self._search_frame = tk.Frame(self._right_frame)
         self._search_frame.pack(side=tk.TOP, fill=tk.X, padx=(0, 17), pady=(0, 6)) # 17 chosen to make scrollbar fit
@@ -228,15 +231,15 @@ class App(tk.Tk):
         self._search_top_right_frame.pack(side=tk.RIGHT, fill=tk.X)
 
         #create button
-        self._info_button = tk.Button(self._left_frame, text="Info", command=self._info)
-        self._add_button = tk.Button(self._left_frame, text="Tilføj", command=self._add_book)
-        self._delete_button = tk.Button(self._left_frame, text="Slet", command=self._delete_book)
-        self._update_button = tk.Button(self._left_frame, text="Opdater", command=self._update_book)
+        self._info_button = tk.Button(self._buttons_frame, text="Info", command=self._info, width=15, height=2)
+        self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=self._add_book, width=15, height=2)
+        self._delete_button = tk.Button(self._buttons_frame, text="Slet", command=self._delete_book, width=15, height=2)
+        self._update_button = tk.Button(self._buttons_frame, text="Opdater", command=self._update_book, width=15, height=2)
 
-        self._info_button.pack()
-        self._add_button.pack()
-        self._delete_button.pack()
-        self._update_button.pack()
+        self._info_button.pack(pady=2)
+        self._add_button.pack(pady=2)
+        self._delete_button.pack(pady=2)
+        self._update_button.pack(pady=2)
 
         #add search title
         search_title = tk.Label(self._search_top_left_frame, text="Bøger", font='Helvetica 15 bold')
