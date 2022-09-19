@@ -5,33 +5,69 @@
     
         classDiagram
           class Book {
-            authors : list[str]
-            genres : list[str]
+            age : Optional[str]
+            authors : Optional[list[str]]
+            binding : Optional[str]
+            brand : Optional[str]
+            dimensions : Optional[str]
+            edition : Optional[int]
+            editor : Optional[str]
+            exam : Optional[str]
+            genre : Optional[str]
+            group : Optional[str]
             id : Optional[int]
-            price
-            stock : int
+            image : Optional[str]
+            imprint : Optional[str]
+            isbn10 : Optional[int]
+            isbn13 : Optional[int]
+            language : Optional[str]
+            model : Optional[int]
+            pages : Optional[int]
+            price : Optional[decimal.Decimal]
+            product_code : Optional[int]
+            publication_month : Optional[str]
+            publication_year : Optional[int]
+            publisher : Optional[str]
+            series : Optional[str]
+            stock : Optional[int]
             title : str
+            type_ : Optional[str]
+            university : Optional[str]
+            weight : Optional[int]
           }
           class Book_Search_Query {
             author : Optional[str]
             genre : Optional[str]
-            id : Optional[int]
+            product_code : Optional[int]
             title : Optional[str]
           }
           class Database {
             con
             cur
+            add_book(book: Book) None
             add_books(books: list[Book]) None
-            edit_book(book_id: int, book_new_info: Book) None
+            edit_book(book: Book) None
             get_book(id: int) Book
-            get_books(query: Book_Search_Query, limit: int, offset: int) list[Book]
+            get_books(query: Book_Search_Query, sort: sort_by, limit: int, offset: int) List[Book]
+            get_minbook(id: int) MinBook
+            get_minbooks(query: Book_Search_Query, sort: sort_by, limit: int, offset: int) list[MinBook]
             sell_book(transaction: Transaction) None
+          }
+          class MinBook {
+            authors : Optional[list[str]]
+            genre : Optional[str]
+            id : Optional[int]
+            product_code : Optional[int]
+            title : str
           }
           class Transaction {
             book_id : int
             id : Optional[int]
             quantity : int
             time : Optional[int]
+          }
+          class sort_by {
+            name
           }
   
        </div>
