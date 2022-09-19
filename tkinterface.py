@@ -309,6 +309,24 @@ class App(tk.Tk):
     def _info(self):
         pass
 
+    def save_book(self):
+        titel = self.add_titel_entry.get()
+        forfatter = self.add_forfatter_entry.get().split(",")
+        forfatter = [i.strip() for i in forfatter]
+        genre = self.add_genre_entry.get().split(",")
+        genre = [i.strip() for i in genre]
+        pris = decimal.Decimal(self.add_pris_entry.get())
+       
+       
+        
+       
+            
+        
+        lager = int(self.add_lager_entry.get())
+
+        newbook = Book(title= titel,price = pris, stock = lager, authors = forfatter, group = genre)
+        self.db.add_books([newbook])
+
     def _add_book(self):
         add_menu = tk.Toplevel(self)
         add_menu.geometry("200x140")
@@ -323,7 +341,7 @@ class App(tk.Tk):
         self.add_pris_entry = tk.Entry(add_menu_hframe)
         self.add_lager_entry = tk.Entry(add_menu_hframe)  
         annuler = tk.Button(add_menu_hframe, text = "afslut", command = add_menu.withdraw)
-        gem = tk.Button(add_menu_hframe, text = "gem", command = self.add_book)
+        gem = tk.Button(add_menu_hframe, text = "gem", command = self.save_book)
 
         self.add_titel_entry.pack(side = tk.TOP, pady = 1)
         self.add_forfatter_entry.pack(side = tk.TOP, pady = 1)
