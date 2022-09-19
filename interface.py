@@ -1,3 +1,4 @@
+from audioop import add
 import tkinter as tk
 from tkinter import Toplevel
 from tkinter import *
@@ -7,6 +8,9 @@ import math
 import time
 from turtle import left
 import decimal
+from database import *
+from tkinter import messagebox
+
 
 fontt = ("Segoe UI Black",12)
 
@@ -18,15 +22,30 @@ class Eksempel1(tk.Frame):
         tk.Frame.__init__(self)
         root.update_idletasks()
         self.build_gui()
+        self.db = Database()
        
+    def error_message(self, str):
+        messagebox.showerror("Fejl", str)
+
     def add_book(self):
         titel = self.add_titel_entry.get()
-        forfatter = self.add_forfatter_entry.get()
-        genre = self.add_genre_entry.get()
-        #pris = decimal(self.add_pris_entry.get())
+        forfatter = self.add_forfatter_entry.get().split(",")
+        forfatter = [i.strip() for i in forfatter]
+        genre = self.add_genre_entry.get().split(",")
+        genre = [i.strip() for i in genre]
+        x = decimal.Decimal(self.add_pris_entry.get())
+        try:
+            pris = decimal.Decimal(x)
+        
+        except decimal.ConversionSyntax:
+            self.error_message("forkert input. Indtast et tal")
+            
+        
         lager = int(self.add_lager_entry.get())
 
-        print(titel,forfatter,genre,lager, self.add_pris_entry.get())
+        newbook = Book(title= titel,price = pris, stock = lager, authors = forfatter, genres = genre)
+        self.db.add_books([newbook])
+        
 
     def click(self,event, name, but):
         name.configure(state=NORMAL)
@@ -36,11 +55,10 @@ class Eksempel1(tk.Frame):
 
     def add_button_menu(self):
         add_menu = Toplevel(root)
+        add_menu.geometry("200x140")
+        add_menu.resizable(False, False)
         add_menu_vframe = Frame(add_menu)
         add_menu_hframe = Frame(add_menu)
-        
-        
-       
 
         #entrys
         self.add_titel_entry = tk.Entry(add_menu_hframe)
@@ -51,31 +69,31 @@ class Eksempel1(tk.Frame):
         annuler = tk.Button(add_menu_hframe, text = "afslut", command = add_menu.withdraw)
         gem = tk.Button(add_menu_hframe, text = "gem", command = self.add_book)
 
-        self.add_titel_entry.pack(side = TOP)
-        self.add_forfatter_entry.pack(side = TOP)
-        self.add_genre_entry.pack(side = TOP)
-        self.add_pris_entry.pack(side = TOP)
-        self.add_lager_entry.pack(side = TOP) 
-        gem.pack(side = LEFT)
-        annuler.pack(side = LEFT, padx = 10)
+        self.add_titel_entry.pack(side = TOP, pady = 1)
+        self.add_forfatter_entry.pack(side = TOP, pady = 1)
+        self.add_genre_entry.pack(side = TOP, pady = 1)
+        self.add_pris_entry.pack(side = TOP, pady = 1)
+        self.add_lager_entry.pack(side = TOP, pady = 1) 
+        gem.pack(side = RIGHT, pady = 4, anchor = NE)
+        annuler.pack(side = RIGHT, padx = 10, pady = 4, anchor = NE)
 
         #text
         self.titel_label = tk.Label(add_menu_vframe, text = "titel: ")  
         self.forfatter_label = tk.Label(add_menu_vframe, text = "forfatter: ") 
         self.genre_label = tk.Label(add_menu_vframe, text = "genre: ") 
         self.pris_label = tk.Label(add_menu_vframe, text = "pris: ")
-        self.lager_label = tk.Label(add_menu_vframe, text = "lager: ") 
+        self.lager_label = tk.Label(add_menu_vframe, text = "lager: ")  
 
-        self.titel_label.pack()
-        self.forfatter_label.pack()
-        self.genre_label.pack()
-        self.pris_label.pack()
-        self.lager_label.pack()
+        self.titel_label.pack(side = TOP, anchor=NW)
+        self.forfatter_label.pack(side = TOP, anchor=NW)
+        self.genre_label.pack(side = TOP, anchor=NW)
+        self.pris_label.pack(side = TOP, anchor=NW)
+        self.lager_label.pack(side = TOP, anchor=NW)
 
        
         #add_menu.mainloop()
-        add_menu_vframe.pack(side=LEFT)
-        add_menu_hframe.pack(side=LEFT)
+        add_menu_vframe.pack(side=LEFT, fill = BOTH, expand = FALSE)
+        add_menu_hframe.pack(side=LEFT, fill = BOTH, expand = FALSE)
 
     def build_gui(self):
 
