@@ -313,14 +313,8 @@ class App(tk.Tk):
         titel = self.add_titel_entry.get()
         forfatter = self.add_forfatter_entry.get().split(",")
         forfatter = [i.strip() for i in forfatter]
-        genre = self.add_genre_entry.get().split(",")
-        genre = [i.strip() for i in genre]
-        pris = decimal.Decimal(self.add_pris_entry.get())
-       
-       
-        
-       
-            
+        genre = self.add_genre_entry.get()
+        pris = decimal.Decimal(self.add_pris_entry.get())        
         
         lager = int(self.add_lager_entry.get())
 
