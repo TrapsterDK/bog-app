@@ -710,6 +710,12 @@ class Database(object):
         self.con.commit()
 
 
+    # delete book
+    def delete_books(self, ids: list[int]) -> None:
+        self.cur.executemany(f"""DELETE FROM books WHERE id = (?)""", [(id, ) for id in ids])
+        self.con.commit()
+
+
 # load database from json file
 def _load_data_from_final_json(db: Database, name: str) -> None:
     with open(name, encoding="utf-8") as f:

@@ -1,4 +1,3 @@
-from time import sleep
 import tkinter as tk
 from tkinter import ttk
 from typing import Any
@@ -185,13 +184,21 @@ class FancyTable(ttk.Treeview):
         self.event_generate("<Motion>",
             x=self.winfo_pointerx() - self.winfo_rootx(), 
             y=self.winfo_pointery() - self.winfo_rooty())
+    
+    # redraw rows color
+    def redraw(self):
+        for iid in self.get_children():
+            if(self.item(iid)['text'] == _MORE_TEXT):
+                self.item(iid, tags=(_MORE,))
+            else:
+                self.item(iid, tags=self._row_color_index(self.index(iid)))
 
 
 #class for tkinter app
 TITLE = "Bog butik"
 class App(tk.Tk):
     none_item = "**Ukendt**"
-    tree_load = 50
+    tree_load = 5
 
     columns =           ("Titel", "Forfatter", "Group", "Produktkode")
     sort_by_options =   ["Titel A-Z", "Titel Z-A", "Forfatter A-Z", "Forfatter Z-A", "Group A-Z", "Group Z-A", "Produktkode stigende", "Produktkode faldende"]
@@ -235,11 +242,13 @@ class App(tk.Tk):
         self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=self._add_book, width=15, height=2)
         self._delete_button = tk.Button(self._buttons_frame, text="Slet", command=self._delete_book, width=15, height=2)
         self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=self._update_book, width=15, height=2)
+        self._sell_button = tk.Button(self._buttons_frame, text="Sælg", command=self._sell_book, width=15, height=2)
 
         self._info_button.pack(pady=2)
         self._add_button.pack(pady=2)
         self._delete_button.pack(pady=2)
         self._update_button.pack(pady=2)
+        self._sell_button.pack(pady=2)
 
         #add search title
         search_title = tk.Label(self._search_top_left_frame, text="Bøger", font='Helvetica 15 bold')
@@ -280,7 +289,6 @@ class App(tk.Tk):
         self._tree.configure(yscrollcommand=vsb.set)
         
         # refresh treeview
-        self._tree_on_select()
         self._tree_add_rows()
 
 
@@ -365,9 +373,21 @@ class App(tk.Tk):
         
 
     def _delete_book(self):
+        #delete from database
+        ids = [self._tree.item(selection)['text'] for selection in self._tree.selection()]
+        self.db.delete_books(ids)
+
+        # delete from tree
+        self._tree.delete(*self._tree.selection())
+
+        # refresh treeview
+        self._tree.redraw()
         pass
 
     def _update_book(self):
+        pass
+
+    def _sell_book(self):
         pass
 
     # sort by coloumn callback when tree header is clicked, set sort_by optionmenu to the clicked coloumn
@@ -389,16 +409,19 @@ class App(tk.Tk):
                 self._add_button['state'] = tk.NORMAL
                 self._delete_button['state'] = tk.DISABLED
                 self._update_button['state'] = tk.DISABLED
+                self._sell_button['state'] = tk.DISABLED
             case 1:
                 self._info_button['state'] = tk.NORMAL
                 self._add_button['state'] = tk.NORMAL
                 self._delete_button['state'] = tk.NORMAL
                 self._update_button['state'] = tk.NORMAL
+                self._sell_button['state'] = tk.NORMAL
             case _:
                 self._info_button['state'] = tk.DISABLED
                 self._add_button['state'] = tk.NORMAL
                 self._delete_button['state'] = tk.NORMAL
                 self._update_button['state'] = tk.DISABLED
+                self._sell_button['state'] = tk.DISABLED
 
     # delete current rows and add new ones
     def _tree_set_rows(self, *args) -> None:
@@ -418,7 +441,7 @@ class App(tk.Tk):
             search, 
             self.sort_by_values[self.sort_by_options.index(self.sort_by.get())], 
             limit=self.tree_load+1, 
-            offset=0 if delete_children else len(self._tree.get_children()))
+            offset=0 if delete_children else len(self._tree.get_children())-1)
 
         # check if are more books to load
         more_books = len(books) > self.tree_load
