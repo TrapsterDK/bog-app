@@ -73,6 +73,42 @@ class EntryWithPlaceholder(tk.Entry):
 
         return self._validate_callback(P)
 
+class PopUp(tk.Toplevel):
+    #close callback defaults to button1 callback, return true to close after callback
+    def __init__(self, title, text, button_text1, button_text2, button_callback1, button_callback2, close_callback=None) -> None:
+        if not close_callback:
+            close_callback = button_callback1
+
+        super().__init__()
+
+        #close
+        self.protocol("WM_DELETE_WINDOW", lambda: self._callback(close_callback))
+
+        # always top, non resizable, no maximize or minimize
+        self.attributes("-topmost", True)
+        self.attributes('-toolwindow', True)
+        self.resizable(False, True)
+        self.grab_set()
+        
+        self.geometry("280x150")
+        self.wm_title(title)
+
+        bf = tk.Frame(self)
+
+        label = tk.Label(self, text=text, font=("Arial", 11), wraplength=250, anchor=tk.N)
+        b1 = ttk.Button(bf, text=button_text1, command=lambda: self._callback(button_callback1))
+        b2 = ttk.Button(bf, text=button_text2, command=lambda: self._callback(button_callback2))
+    
+        bf.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=2, pady=(0,2), anchor=tk.S) 
+        label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(8, 0))
+        b1.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        b2.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    
+
+    def _callback(self, callback) -> None:
+        if callback == None or callback():
+            self.destroy()
+    
 
 _MORE = 0
 _EVEN = 1
@@ -198,7 +234,7 @@ class FancyTable(ttk.Treeview):
 TITLE = "Bog butik"
 class App(tk.Tk):
     none_item = "**Ukendt**"
-    tree_load = 5
+    tree_load = 50
 
     columns =           ("Titel", "Forfatter", "Group", "Produktkode")
     sort_by_options =   ["Titel A-Z", "Titel Z-A", "Forfatter A-Z", "Forfatter Z-A", "Group A-Z", "Group Z-A", "Produktkode stigende", "Produktkode faldende"]
@@ -290,6 +326,7 @@ class App(tk.Tk):
         
         # refresh treeview
         self._tree_add_rows()
+        self._tree_on_select()
 
 
     def _create_searchbars(self):
@@ -321,15 +358,8 @@ class App(tk.Tk):
         titel = self.add_titel_entry.get()
         forfatter = self.add_forfatter_entry.get().split(",")
         forfatter = [i.strip() for i in forfatter]
-        genre = self.add_genre_entry.get().split(",")
-        genre = [i.strip() for i in genre]
+        genre = self.add_genre_entry.get()
         pris = decimal.Decimal(self.add_pris_entry.get())
-       
-       
-        
-       
-            
-        
         lager = int(self.add_lager_entry.get())
 
         newbook = Book(title= titel,price = pris, stock = lager, authors = forfatter, group = genre)
@@ -394,7 +424,22 @@ class App(tk.Tk):
         pass
 
     def _sell_book(self):
-        pass
+        book = self.db.get_book(self._tree.item(self._tree.selection()[0])['text'])
+        
+        if 50 < len(book.title):
+            book.title = book.title[:70] + "..."
+        
+        PopUp("Sælg", f'Sælg bogen\n"{book.title}"\nFor {book.price}kr\nUd af {book.stock}', "Annuller", "Bekræft", None, self._sell_book_accept)
+
+    def _sell_book_accept(self):
+        
+        transaction = Transaction(
+            book_id = self._tree.item(self._tree.selection()[0])['text'],
+            quantity = 1
+        )
+        
+        book = self.db.sell_book(transaction)
+        return True
 
     # sort by coloumn callback when tree header is clicked, set sort_by optionmenu to the clicked coloumn
     def _tree_sort_by_coloumn(self, coloumn: str) -> None:

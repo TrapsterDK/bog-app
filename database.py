@@ -750,7 +750,7 @@ def _load_data_from_final_json(db: Database, name: str) -> None:
                 type_ = book['Type'],
                 university = book['University'],
                 weight = book['Weight_Gram'],
-                stock = 0))
+                stock = 10))
         db.add_books(books)
 
 
