@@ -75,11 +75,11 @@ class EntryWithPlaceholder(tk.Entry):
 
 class PopUp(tk.Toplevel):
     #close callback defaults to button1 callback, return true to close after callback
-    def __init__(self, title, text, button_text1, button_text2, button_callback1, button_callback2, close_callback=None) -> None:
+    def __init__(self, title, button_text1, button_text2, button_callback1, button_callback2, close_callback=None, *args, **kwargs) -> None:
         if not close_callback:
             close_callback = button_callback1
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
         #close
         self.protocol("WM_DELETE_WINDOW", lambda: self._callback(close_callback))
@@ -95,12 +95,10 @@ class PopUp(tk.Toplevel):
 
         bf = tk.Frame(self)
 
-        label = tk.Label(self, text=text, font=("Arial", 11), wraplength=250, anchor=tk.N)
         b1 = ttk.Button(bf, text=button_text1, command=lambda: self._callback(button_callback1))
         b2 = ttk.Button(bf, text=button_text2, command=lambda: self._callback(button_callback2))
     
         bf.pack(side=tk.BOTTOM, fill=tk.X, expand=True, padx=2, pady=(0,2), anchor=tk.S) 
-        label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(8, 0))
         b1.pack(side=tk.LEFT, fill=tk.X, expand=True)
         b2.pack(side=tk.LEFT, fill=tk.X, expand=True)
     
@@ -108,6 +106,13 @@ class PopUp(tk.Toplevel):
     def _callback(self, callback) -> None:
         if callback == None or callback():
             self.destroy()
+
+class PopUpText(PopUp):
+    def __init__(self, text, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        label = tk.Label(self, text=text, font=("Arial", 11), wraplength=250, anchor=tk.N)
+        label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(8, 0))
+
     
 
 _MORE = 0
@@ -429,10 +434,10 @@ class App(tk.Tk):
         if 50 < len(book.title):
             book.title = book.title[:70] + "..."
         
-        PopUp("Sælg", f'Sælg bogen\n"{book.title}"\nFor {book.price}kr\nUd af {book.stock}', "Annuller", "Bekræft", None, self._sell_book_accept)
+        PopUpText(f'Sælg bogen\n"{book.title}"\nFor {book.price}kr\nUd af {book.stock}', "Sælg", "Annuller", "Bekræft", None, self._sell_book_accept)
 
     def _sell_book_accept(self):
-        
+
         transaction = Transaction(
             book_id = self._tree.item(self._tree.selection()[0])['text'],
             quantity = 1
