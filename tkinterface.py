@@ -75,7 +75,7 @@ class EntryWithPlaceholder(tk.Entry):
 
 class PopUp(tk.Toplevel):
     #close callback defaults to button1 callback, return true to close after callback
-    def __init__(self, title, button_text1, button_text2, button_callback1, button_callback2, close_callback=None, *args, **kwargs) -> None:
+    def __init__(self, title, button_callback2, button_callback1=None, button_text2="Bekræft", button_text1="Annuller", size="280x150", close_callback=None, *args, **kwargs) -> None:
         if not close_callback:
             close_callback = button_callback1
 
@@ -90,7 +90,7 @@ class PopUp(tk.Toplevel):
         self.resizable(False, True)
         self.grab_set()
         
-        self.geometry("280x150")
+        self.geometry(size)
         self.wm_title(title)
 
         bf = tk.Frame(self)
@@ -104,7 +104,7 @@ class PopUp(tk.Toplevel):
     
 
     def _callback(self, callback) -> None:
-        if callback == None or callback():
+        if callback == None or callback(self):
             self.destroy()
 
 class PopUpText(PopUp):
@@ -359,7 +359,7 @@ class App(tk.Tk):
     def _info(self):
         pass
 
-    def save_book(self):
+    def save_book(self, popup):
         titel = self.add_titel_entry.get()
         forfatter = self.add_forfatter_entry.get().split(",")
         forfatter = [i.strip() for i in forfatter]
@@ -369,11 +369,10 @@ class App(tk.Tk):
 
         newbook = Book(title= titel,price = pris, stock = lager, authors = forfatter, group = genre)
         self.db.add_books([newbook])
+        return True
 
     def _add_book(self):
-        add_menu = tk.Toplevel(self)
-        add_menu.geometry("200x140")
-        add_menu.resizable(False, False)
+        add_menu = PopUp("Tilføj bog", self.save_book)
         add_menu_vframe = tk.Frame(add_menu)
         add_menu_hframe = tk.Frame(add_menu)
 
@@ -383,16 +382,12 @@ class App(tk.Tk):
         self.add_genre_entry = tk.Entry(add_menu_hframe)
         self.add_pris_entry = tk.Entry(add_menu_hframe)
         self.add_lager_entry = tk.Entry(add_menu_hframe)  
-        annuler = tk.Button(add_menu_hframe, text = "afslut", command = add_menu.withdraw)
-        gem = tk.Button(add_menu_hframe, text = "gem", command = self.save_book)
 
         self.add_titel_entry.pack(side = tk.TOP, pady = 1)
         self.add_forfatter_entry.pack(side = tk.TOP, pady = 1)
         self.add_genre_entry.pack(side = tk.TOP, pady = 1)
         self.add_pris_entry.pack(side = tk.TOP, pady = 1)
         self.add_lager_entry.pack(side = tk.TOP, pady = 1) 
-        gem.pack(side = tk.RIGHT, pady = 4, anchor = tk.NE)
-        annuler.pack(side = tk.RIGHT, padx = 10, pady = 4, anchor = tk.NE)
 
         #text
         self.titel_label = tk.Label(add_menu_vframe, text = "titel: ")  
@@ -433,11 +428,13 @@ class App(tk.Tk):
         
         if 50 < len(book.title):
             book.title = book.title[:70] + "..."
-        
-        PopUpText(f'Sælg bogen\n"{book.title}"\nFor {book.price}kr\nUd af {book.stock}', "Sælg", "Annuller", "Bekræft", None, self._sell_book_accept)
 
-    def _sell_book_accept(self):
+        if(0 < book.stock):
+            PopUpText(f'Sælg bogen\n"{book.title}"\nFor {book.price}kr\nUd af {book.stock}', "Sælg", self._sell_book_accept)
+        else:
+            PopUpText(f'Bogen \n"{book.title}"\n Er udsolgt', "Sælg", None)
 
+    def _sell_book_accept(self, popup):
         transaction = Transaction(
             book_id = self._tree.item(self._tree.selection()[0])['text'],
             quantity = 1

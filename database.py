@@ -241,7 +241,7 @@ class Database(object):
         if dec is None:
             return None
 
-        return int(decimal.Decimal(dec) * decimal.Decimal(100))
+        return int(dec * decimal.Decimal(100))
 
 
     # insert something into a table and get id no matter if it exists or not
@@ -741,7 +741,7 @@ def _load_data_from_final_json(db: Database, name: str) -> None:
                 model = book['Model'],
                 title = book['Name'],
                 pages = book['Pages'],
-                price = book['Price'],
+                price = decimal.Decimal(book['Price']),
                 product_code = book['Product_Code_2'],
                 publication_month = book['Publication_Month'],
                 publication_year = book['Publication_Year'],
@@ -762,7 +762,3 @@ if __name__ == "__main__":
 
         book = db.get_book(2)
         print(book)
-        
-        #book.authors = ["Heynig", "Stic", "WIFI"]
-        #db.edit_book(book)
-        #print(db.get_book(2))
