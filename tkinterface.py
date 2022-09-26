@@ -283,21 +283,21 @@ class App(tk.Tk):
         self._saldo_label = tk.Label(self._buttons_frame, text = "Saldo:", font = 'Helvetica 12 bold')
         self._saldo_label.pack(anchor = tk.N, side = tk.TOP, pady = (5,0))
 
-        self._saldo_label2 = tk.Label(self._buttons_frame, text = self.db.get_saldo(), font = 'Helvetica 12')
-        self._saldo_label2.pack(anchor = tk.N, side = tk.TOP, pady = (0,35))
+        self._saldo_label_amount = tk.Label(self._buttons_frame, text = self.db.get_saldo(), font = 'Helvetica 12')
+        self._saldo_label_amount.pack(anchor = tk.N, side = tk.TOP, pady = (0,30))
 
         #create button
-        self._info_button = tk.Button(self._buttons_frame, text="Info", command=self._info, width=15, height=2)
-        self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=self._add_book, width=15, height=2)
-        self._delete_button = tk.Button(self._buttons_frame, text="Slet", command=self._delete_book, width=15, height=2)
-        self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=self._update_book, width=15, height=2)
-        self._sell_button = tk.Button(self._buttons_frame, text="Sælg", command=self._sell_book, width=15, height=2)
+        self._info_button = tk.Button(self._buttons_frame, text="Info", command=self._info, width=15)
+        self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=self._add_book, width=15)
+        self._delete_button = tk.Button(self._buttons_frame, text="Slet", command=self._delete_book, width=15)
+        self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=self._update_book, width=15)
+        self._sell_button = tk.Button(self._buttons_frame, text="Sælg", command=self._sell_book, width=15)
 
-        self._info_button.pack(pady=2, ipady = 4)
-        self._add_button.pack(pady=2, ipady = 4)
-        self._delete_button.pack(pady=2, ipady = 4)
-        self._update_button.pack(pady=2, ipady = 4)
-        self._sell_button.pack(pady=2, ipady = 4)
+        self._info_button.pack(pady=2, ipady = 11)
+        self._add_button.pack(pady=2, ipady = 11)
+        self._delete_button.pack(pady=2, ipady = 11)
+        self._update_button.pack(pady=2, ipady = 11)
+        self._sell_button.pack(pady=2, ipady = 11)
 
         #add search title
         search_title = tk.Label(self._search_top_left_frame, text="Bøger", font='Helvetica 15 bold')
@@ -450,7 +450,7 @@ class App(tk.Tk):
         )
         
         book = self.db.sell_book(transaction)
-        self._saldo_label2.configure(text = self.db.get_saldo())
+        self._saldo_label_amount.configure(text = self.db.get_saldo())
         return True
 
     # sort by coloumn callback when tree header is clicked, set sort_by optionmenu to the clicked coloumn
