@@ -87,7 +87,7 @@ class PopUp(tk.Toplevel):
         # always top, non resizable, no maximize or minimize
         self.attributes("-topmost", True)
         self.attributes('-toolwindow', True)
-        self.resizable(False, True)
+        self.resizable(False, False)
         self.grab_set()
         
         self.geometry(size)
