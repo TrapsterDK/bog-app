@@ -85,6 +85,7 @@ class PopUp(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", lambda: self._callback(close_callback))
 
         # always top, non resizable, no maximize or minimize
+        self.focus_force()
         self.attributes("-topmost", True)
         self.attributes('-toolwindow', True)
         self.resizable(False, False)
