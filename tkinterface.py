@@ -280,11 +280,11 @@ class App(tk.Tk):
         self._search_top_right_frame.pack(side=tk.RIGHT, fill=tk.X)
 
         # saldo label
-        self._saldo_label = tk.Label(self._buttons_frame, text = "saldo:", font = 'Helvetica 12')
+        self._saldo_label = tk.Label(self._buttons_frame, text = "Saldo:", font = 'Helvetica 12 bold')
         self._saldo_label.pack(anchor = tk.N, side = tk.TOP, pady = (5,0))
 
         self._saldo_label2 = tk.Label(self._buttons_frame, text = self.db.get_saldo(), font = 'Helvetica 12')
-        self._saldo_label2.pack(anchor = tk.N, side = tk.TOP, pady = (5,35))
+        self._saldo_label2.pack(anchor = tk.N, side = tk.TOP, pady = (0,35))
 
         #create button
         self._info_button = tk.Button(self._buttons_frame, text="Info", command=self._info, width=15, height=2)
@@ -293,11 +293,11 @@ class App(tk.Tk):
         self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=self._update_book, width=15, height=2)
         self._sell_button = tk.Button(self._buttons_frame, text="Sælg", command=self._sell_book, width=15, height=2)
 
-        self._info_button.pack(pady=2)
-        self._add_button.pack(pady=2)
-        self._delete_button.pack(pady=2)
-        self._update_button.pack(pady=2)
-        self._sell_button.pack(pady=2)
+        self._info_button.pack(pady=2, ipady = 4)
+        self._add_button.pack(pady=2, ipady = 4)
+        self._delete_button.pack(pady=2, ipady = 4)
+        self._update_button.pack(pady=2, ipady = 4)
+        self._sell_button.pack(pady=2, ipady = 4)
 
         #add search title
         search_title = tk.Label(self._search_top_left_frame, text="Bøger", font='Helvetica 15 bold')
@@ -378,7 +378,6 @@ class App(tk.Tk):
 
         newbook = Book(title= titel,price = pris, stock = lager, authors = forfatter, group = genre)
         self.db.add_books([newbook])
-        self._saldo_label2.config(text = self.db.get_saldo())
         return True
 
     def _add_book(self):
@@ -451,6 +450,7 @@ class App(tk.Tk):
         )
         
         book = self.db.sell_book(transaction)
+        self._saldo_label2.configure(text = self.db.get_saldo())
         return True
 
     # sort by coloumn callback when tree header is clicked, set sort_by optionmenu to the clicked coloumn
