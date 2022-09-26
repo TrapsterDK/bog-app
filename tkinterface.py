@@ -85,6 +85,7 @@ class PopUp(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", lambda: self._callback(close_callback))
 
         # always top, non resizable, no maximize or minimize
+        self.focus_force()
         self.attributes("-topmost", True)
         self.attributes('-toolwindow', True)
         self.resizable(False, False)
@@ -439,7 +440,7 @@ class App(tk.Tk):
             book.title = book.title[:70] + "..."
 
         if(0 < book.stock):
-            PopUpText(f'Sælg bogen\n"{book.title}"\nFor {book.price}kr\nUd af {book.stock}', "Sælg", self._sell_book_accept)
+            PopUpText(f'Sælg bogen:\n"{book.title}"\nPris: {book.price}kr\nLager: {book.stock}', "Sælg", self._sell_book_accept)
         else:
             PopUpText(f'Bogen \n"{book.title}"\n Er udsolgt', "Sælg", None)
 

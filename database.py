@@ -710,6 +710,10 @@ class Database(object):
         self.con.commit()
 
 
+    def get_saldo(self) -> decimal.Decimal():
+        self.cur.execute("""SELECT SUM(price*quantity) FROM transactions""")
+        return self._int_to_decimal(self.cur.fetchone()[0])
+
     # delete book
     def delete_books(self, ids: list[int]) -> None:
         self.cur.executemany(f"""DELETE FROM books WHERE id = (?)""", [(id, ) for id in ids])
@@ -762,3 +766,4 @@ if __name__ == "__main__":
 
         book = db.get_book(2)
         print(book)
+        print(db.get_saldo())
