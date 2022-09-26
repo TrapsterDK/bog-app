@@ -87,7 +87,7 @@ class PopUp(tk.Toplevel):
         # always top, non resizable, no maximize or minimize
         self.attributes("-topmost", True)
         self.attributes('-toolwindow', True)
-        self.resizable(False, True)
+        self.resizable(False, False)
         self.grab_set()
         
         self.geometry(size)
@@ -430,7 +430,7 @@ class App(tk.Tk):
             book.title = book.title[:70] + "..."
 
         if(0 < book.stock):
-            PopUpText(f'Sælg bogen\n"{book.title}"\nFor {book.price}kr\nUd af {book.stock}', "Sælg", self._sell_book_accept)
+            PopUpText(f'Sælg bogen:\n"{book.title}"\nPris: {book.price}kr\nLager: {book.stock}', "Sælg", self._sell_book_accept)
         else:
             PopUpText(f'Bogen \n"{book.title}"\n Er udsolgt', "Sælg", None)
 
