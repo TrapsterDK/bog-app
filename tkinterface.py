@@ -261,7 +261,7 @@ class App(tk.Tk):
         self._right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, pady=(0,6))
 
         self._buttons_frame = tk.Frame(self._left_frame)
-        self._buttons_frame.pack(side=tk.LEFT, padx=4)
+        self._buttons_frame.pack(side=tk.LEFT, padx=4, fill = tk.Y)
 
         self._search_frame = tk.Frame(self._right_frame)
         self._search_frame.pack(side=tk.TOP, fill=tk.X, padx=(0, 17), pady=(0, 6)) # 17 chosen to make scrollbar fit
@@ -277,6 +277,13 @@ class App(tk.Tk):
         self._search_top_left_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self._search_top_right_frame = tk.Frame(self._search_top_frame)
         self._search_top_right_frame.pack(side=tk.RIGHT, fill=tk.X)
+
+        # saldo label
+        self._saldo_label = tk.Label(self._buttons_frame, text = "saldo:", font = 'Helvetica 12')
+        self._saldo_label.pack(anchor = tk.N, side = tk.TOP, pady = (5,0))
+
+        self._saldo_label2 = tk.Label(self._buttons_frame, text = self.db.get_saldo(), font = 'Helvetica 12')
+        self._saldo_label2.pack(anchor = tk.N, side = tk.TOP, pady = (5,35))
 
         #create button
         self._info_button = tk.Button(self._buttons_frame, text="Info", command=self._info, width=15, height=2)
@@ -302,7 +309,8 @@ class App(tk.Tk):
         self._create_sortmenu()
         self._create_searchbars()
         self._create_table()
-
+        
+        
 
     def _create_sortmenu(self):
         # variable for sort by option
@@ -369,6 +377,7 @@ class App(tk.Tk):
 
         newbook = Book(title= titel,price = pris, stock = lager, authors = forfatter, group = genre)
         self.db.add_books([newbook])
+        self._saldo_label2.config(text = self.db.get_saldo())
         return True
 
     def _add_book(self):
