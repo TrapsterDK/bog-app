@@ -246,6 +246,10 @@ class App(tk.Tk):
     sort_by_options =   ["Titel A-Z", "Titel Z-A", "Forfatter A-Z", "Forfatter Z-A", "Group A-Z", "Group Z-A", "Produktkode stigende", "Produktkode faldende"]
     sort_by_values =    [sort_by.title_asc, sort_by.title_desc, sort_by.author_asc, sort_by.author_desc, sort_by.group_asc, sort_by.group_desc, sort_by.product_code_asc, sort_by.product_code_desc]
 
+    things_text = ["Titel", "Forfattere", "Gruppe", "Produktkode", "Pris", "Antal"]
+    things = ["title", "authors", "group", "product_code", "price", "stock"]
+    things_type = [str, list, str, int, decimal.Decimal, int]
+
     def __init__(self, db_name="database.db"):
         super().__init__()
 
@@ -287,10 +291,10 @@ class App(tk.Tk):
         self._saldo_label_amount.pack(anchor = tk.N, side = tk.TOP, pady = (0,30))
 
         #create button
-        self._info_button = tk.Button(self._buttons_frame, text="Info", command=self._info, width=15)
-        self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=self._add_book, width=15)
+        self._info_button = tk.Button(self._buttons_frame, text="Info", command=lambda: self._book_popup(True, True), width=15)
+        self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=lambda: self._book_popup(False, False), width=15)
         self._delete_button = tk.Button(self._buttons_frame, text="Slet", command=self._delete_book, width=15)
-        self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=self._update_book, width=15)
+        self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=lambda: self._book_popup(True, False), width=15)
         self._sell_button = tk.Button(self._buttons_frame, text="Sælg", command=self._sell_book, width=15)
 
         self._info_button.pack(pady=2, ipady = 11)
@@ -380,42 +384,30 @@ class App(tk.Tk):
         self.db.add_books([newbook])
         return True
 
-    def _add_book(self):
+    def _book_popup(self, book=False, label=False):
         add_menu = PopUp("Tilføj bog", self.save_book)
+
         add_menu_vframe = tk.Frame(add_menu)
         add_menu_hframe = tk.Frame(add_menu)
+        add_menu_vframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = False)
+        add_menu_hframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = True)
 
-        #entrys
-        self.add_titel_entry = tk.Entry(add_menu_hframe)
-        self.add_forfatter_entry = tk.Entry(add_menu_hframe)
-        self.add_genre_entry = tk.Entry(add_menu_hframe)
-        self.add_pris_entry = tk.Entry(add_menu_hframe)
-        self.add_lager_entry = tk.Entry(add_menu_hframe)  
+        for thing, thing_text in zip(self.things, self.things_text):
+            titel_label = tk.Label(add_menu_vframe, text = thing_text + ": ")  
+            titel_label.pack(side = tk.TOP, anchor=tk.NW)
 
-        self.add_titel_entry.pack(side = tk.TOP, pady = 1)
-        self.add_forfatter_entry.pack(side = tk.TOP, pady = 1)
-        self.add_genre_entry.pack(side = tk.TOP, pady = 1)
-        self.add_pris_entry.pack(side = tk.TOP, pady = 1)
-        self.add_lager_entry.pack(side = tk.TOP, pady = 1) 
+            if book:
+                book = self.db.get_book(self._tree.item(self._tree.selection()[0])['text'])
 
-        #text
-        self.titel_label = tk.Label(add_menu_vframe, text = "titel: ")  
-        self.forfatter_label = tk.Label(add_menu_vframe, text = "forfatter: ") 
-        self.genre_label = tk.Label(add_menu_vframe, text = "genre: ") 
-        self.pris_label = tk.Label(add_menu_vframe, text = "pris: ")
-        self.lager_label = tk.Label(add_menu_vframe, text = "lager: ")  
+            if label:
+                add_titel_entry = tk.Label(add_menu_hframe, text=getattr(book, thing), anchor=tk.W)
+            else:
+                add_titel_entry = tk.Entry(add_menu_hframe)
+                if book:
+                    add_titel_entry.insert(0, getattr(book, thing))
 
-        self.titel_label.pack(side = tk.TOP, anchor=tk.NW)
-        self.forfatter_label.pack(side = tk.TOP, anchor=tk.NW)
-        self.genre_label.pack(side = tk.TOP, anchor=tk.NW)
-        self.pris_label.pack(side = tk.TOP, anchor=tk.NW)
-        self.lager_label.pack(side = tk.TOP, anchor=tk.NW)
-
-       
-        #add_menu.mainloop()
-        add_menu_vframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = tk.FALSE)
-        add_menu_hframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = tk.FALSE)
-        
+            add_titel_entry.pack(side = tk.TOP, fill=tk.X, expand=True, pady = 1)
+                    
 
     def _delete_book(self):
         #delete from database
