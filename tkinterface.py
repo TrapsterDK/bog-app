@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any
 from database import *
+from tkinter import messagebox
 
 # entry with placeholder
 class EntryWithPlaceholder(tk.Entry):
@@ -432,7 +433,7 @@ class App(tk.Tk):
         if(0 < book.stock):
             PopUpText(f'Sælg bogen:\n"{book.title}"\nPris: {book.price}kr\nLager: {book.stock}', "Sælg", self._sell_book_accept)
         else:
-            PopUpText(f'Bogen \n"{book.title}"\n Er udsolgt', "Sælg", None)
+            PopUpText(f'Bogen \n"{book.title}"\n Er udsolgt', "Sælg", None, button_callback1=None, button_text2="Tilbage", button_text1=None)
 
     def _sell_book_accept(self, popup):
         transaction = Transaction(
