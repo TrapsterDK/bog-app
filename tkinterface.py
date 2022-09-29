@@ -246,7 +246,7 @@ class FancyTable(ttk.Treeview):
             y=self.winfo_pointery() - self.winfo_rooty())
     
     # redraw rows color
-    def redraw(self):
+    def redraw(self) -> None:
         for iid in self.get_children():
             if(self.item(iid)['text'] == _MORE_TEXT):
                 self.item(iid, tags=(_MORE,))
