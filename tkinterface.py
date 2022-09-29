@@ -1,4 +1,7 @@
+from decimal import Decimal
 import tkinter as tk
+from tkinter import font
+from tkinter import messagebox
 from tkinter import ttk
 from typing import Any
 from database import *
@@ -47,6 +50,19 @@ class EntryWithPlaceholder(tk.Entry):
         
         return self.sv.get()
 
+    # set value while insuring proper placeholder
+    def set(self, value: str) -> None:
+        if value:
+            self.delete(0, tk.END)
+            self['fg'] = self._default_color
+            self.insert(0, value)
+            
+            if self.get():
+                return
+
+            self['fg'] = self._placeholder_color
+            self.insert(0, self._placeholder_text)
+
     # prevent write event to fire when it is just placeholder being written
     def _write_callback(self, *args) -> None:
         if self['fg'] == self._placeholder_color:
@@ -63,8 +79,9 @@ class EntryWithPlaceholder(tk.Entry):
         return self.sv.trace_add(mode, callback)
     
     # set validation callback
-    def validate(self, callback: Callable) -> None:
+    def validate(self, callback: Callable, validate_type) -> None:
         self._validate_callback = callback
+        self._validate_type = validate_type
         self.configure(validate=tk.ALL, validatecommand=(self.register(self._validate), '%P'))
 
     # prevent validating when it is just placeholder being written
@@ -72,11 +89,11 @@ class EntryWithPlaceholder(tk.Entry):
         if self['fg'] == self._placeholder_color:
             return True
 
-        return self._validate_callback(P)
+        return self._validate_callback(P, self._validate_type)
 
 class PopUp(tk.Toplevel):
     #close callback defaults to button1 callback, return true to close after callback
-    def __init__(self, title, button_callback2, button_callback1=None, button_text2="Bekræft", button_text1="Annuller", size="280x150", close_callback=None, *args, **kwargs) -> None:
+    def __init__(self, title, button_callback2, button_callback1=None, button_text2="Bekræft", button_text1="Annuller", size="300x155", close_callback=None, *args, **kwargs) -> None:
         if not close_callback:
             close_callback = button_callback1
 
@@ -86,6 +103,7 @@ class PopUp(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", lambda: self._callback(close_callback))
 
         # always top, non resizable, no maximize or minimize
+        self.focus_force()
         self.attributes("-topmost", True)
         self.attributes('-toolwindow', True)
         self.resizable(False, False)
@@ -111,7 +129,7 @@ class PopUp(tk.Toplevel):
 class PopUpText(PopUp):
     def __init__(self, text, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        label = tk.Label(self, text=text, font=("Arial", 11), wraplength=250, anchor=tk.N)
+        label = tk.Label(self, text=text, font=("Arial", 11), wraplength=280, anchor=tk.N)
         label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(8, 0))
 
     
@@ -242,9 +260,13 @@ class App(tk.Tk):
     none_item = "**Ukendt**"
     tree_load = 50
 
-    columns =           ("Titel", "Forfatter", "Group", "Produktkode")
+    columns =           ("Titel", "Forfatter", "Gruppe", "Produktkode")
     sort_by_options =   ["Titel A-Z", "Titel Z-A", "Forfatter A-Z", "Forfatter Z-A", "Group A-Z", "Group Z-A", "Produktkode stigende", "Produktkode faldende"]
     sort_by_values =    [sort_by.title_asc, sort_by.title_desc, sort_by.author_asc, sort_by.author_desc, sort_by.group_asc, sort_by.group_desc, sort_by.product_code_asc, sort_by.product_code_desc]
+
+    data_text = ["Titel", "Forfattere", "Gruppe", "Produktkode", "Pris", "Antal", "Redaktør", "Sider", "Forlægger"]
+    data = ["title", "authors", "group", "product_code", "price", "stock", "editor", "pages", "publisher"]
+    data_type = [str, list, str, int, decimal.Decimal, int, str, int, str]
 
     def __init__(self, db_name="database.db"):
         super().__init__()
@@ -262,7 +284,7 @@ class App(tk.Tk):
         self._right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, pady=(0,6))
 
         self._buttons_frame = tk.Frame(self._left_frame)
-        self._buttons_frame.pack(side=tk.LEFT, padx=4)
+        self._buttons_frame.pack(side=tk.LEFT, padx=4, fill = tk.Y)
 
         self._search_frame = tk.Frame(self._right_frame)
         self._search_frame.pack(side=tk.TOP, fill=tk.X, padx=(0, 17), pady=(0, 6)) # 17 chosen to make scrollbar fit
@@ -279,18 +301,25 @@ class App(tk.Tk):
         self._search_top_right_frame = tk.Frame(self._search_top_frame)
         self._search_top_right_frame.pack(side=tk.RIGHT, fill=tk.X)
 
-        #create button
-        self._info_button = tk.Button(self._buttons_frame, text="Info", command=self._info, width=15, height=2)
-        self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=self._add_book, width=15, height=2)
-        self._delete_button = tk.Button(self._buttons_frame, text="Slet", command=self._delete_book, width=15, height=2)
-        self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=self._update_book, width=15, height=2)
-        self._sell_button = tk.Button(self._buttons_frame, text="Sælg", command=self._sell_book, width=15, height=2)
+        # saldo label
+        self._saldo_label = tk.Label(self._buttons_frame, text = "Saldo:", font = 'Helvetica 12 bold')
+        self._saldo_label.pack(anchor = tk.N, side = tk.TOP, pady = (5,0))
 
-        self._info_button.pack(pady=2)
-        self._add_button.pack(pady=2)
-        self._delete_button.pack(pady=2)
-        self._update_button.pack(pady=2)
-        self._sell_button.pack(pady=2)
+        self._saldo_label_amount = tk.Label(self._buttons_frame, text = self.db.get_saldo(), font = 'Helvetica 12')
+        self._saldo_label_amount.pack(anchor = tk.N, side = tk.TOP, pady = (0,30))
+
+        #create button
+        self._info_button = tk.Button(self._buttons_frame, text="Info", command=lambda: self._book_popup("Bog info", None, True, True), width=15)
+        self._add_button = tk.Button(self._buttons_frame, text="Tilføj", command=lambda: self._book_popup("Tilføg bog", self._add_book, False, False), width=15)
+        self._delete_button = tk.Button(self._buttons_frame, text="Slet", command=self._delete_book, width=15)
+        self._update_button = tk.Button(self._buttons_frame, text="Rediger", command=lambda: self._book_popup("Rediger bog", self._edit_book, True, False), width=15)
+        self._sell_button = tk.Button(self._buttons_frame, text="Sælg", command=self._sell_book, width=15)
+
+        self._info_button.pack(pady=2, ipady = 11)
+        self._add_button.pack(pady=2, ipady = 11)
+        self._delete_button.pack(pady=2, ipady = 11)
+        self._update_button.pack(pady=2, ipady = 11)
+        self._sell_button.pack(pady=2, ipady = 11)
 
         #add search title
         search_title = tk.Label(self._search_top_left_frame, text="Bøger", font='Helvetica 15 bold')
@@ -303,7 +332,7 @@ class App(tk.Tk):
         self._create_sortmenu()
         self._create_searchbars()
         self._create_table()
-
+        
 
     def _create_sortmenu(self):
         # variable for sort by option
@@ -348,66 +377,111 @@ class App(tk.Tk):
             self._search_bars.append(search_bar)
 
         #allow only numbers for product code
-        self._search_bars[3].validate(self._validate_integer)
+        self._search_bars[3].validate(self._validate, int)
 
     @staticmethod   
-    def _validate_integer(P: str):
-        if P.isdigit() or P == "":
-            return True
-        else:
-            return False
+    def _validate(P: str, vtype):
+        try:
+            if P == "" or vtype(P):
+                return True
+        except:
+            pass
+        return False
 
     def _info(self):
         pass
 
-    def save_book(self, popup):
-        titel = self.add_titel_entry.get()
-        forfatter = self.add_forfatter_entry.get().split(",")
-        forfatter = [i.strip() for i in forfatter]
-        genre = self.add_genre_entry.get()
-        pris = decimal.Decimal(self.add_pris_entry.get())
-        lager = int(self.add_lager_entry.get())
+    def _book_from_popup(self, popup, book):
+        for thing, entry, vtype in zip(self.data, popup.entries, self.data_type):
+            value = entry.get()
+            if value:
+                if vtype == list:
+                    value = map(str.strip, value.split(','))
+                else:
+                    value = vtype(value)
 
-        newbook = Book(title= titel,price = pris, stock = lager, authors = forfatter, group = genre)
-        self.db.add_books([newbook])
+            setattr(book, thing, value)
+
+        return book
+
+    def _add_book(self, popup):
+        book = self._book_from_popup(popup, Book())
+        if book.title == None:
+            messagebox.showerror("Fejl", "Bogen skal have en titel")
+            return False
+
+        self.db.add_book(book)
+        self._tree_set_rows()
+        return True
+        
+    def _edit_book(self, popup):
+        book = self._book_from_popup(popup, self.book)
+        if book.title == None:
+            messagebox.showerror("Fejl", "Bogen skal have en titel")
+            return False
+
+        self.db.edit_book(book)
+        self._tree_set_rows()
         return True
 
-    def _add_book(self):
-        add_menu = PopUp("Tilføj bog", self.save_book)
-        add_menu_vframe = tk.Frame(add_menu)
-        add_menu_hframe = tk.Frame(add_menu)
+    def _book_popup(self, title, callback, book=False, label=False):
+        popup = PopUp(title, callback, size=str(400) + "x" + str(len(self.data)*24+2))
 
-        #entrys
-        self.add_titel_entry = tk.Entry(add_menu_hframe)
-        self.add_forfatter_entry = tk.Entry(add_menu_hframe)
-        self.add_genre_entry = tk.Entry(add_menu_hframe)
-        self.add_pris_entry = tk.Entry(add_menu_hframe)
-        self.add_lager_entry = tk.Entry(add_menu_hframe)  
+        add_menu_vframe = tk.Frame(popup)
+        add_menu_hframe = tk.Frame(popup)
+        add_menu_vframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = False)
+        add_menu_hframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = True)
 
-        self.add_titel_entry.pack(side = tk.TOP, pady = 1)
-        self.add_forfatter_entry.pack(side = tk.TOP, pady = 1)
-        self.add_genre_entry.pack(side = tk.TOP, pady = 1)
-        self.add_pris_entry.pack(side = tk.TOP, pady = 1)
-        self.add_lager_entry.pack(side = tk.TOP, pady = 1) 
+        popup.entries = []
 
-        #text
-        self.titel_label = tk.Label(add_menu_vframe, text = "titel: ")  
-        self.forfatter_label = tk.Label(add_menu_vframe, text = "forfatter: ") 
-        self.genre_label = tk.Label(add_menu_vframe, text = "genre: ") 
-        self.pris_label = tk.Label(add_menu_vframe, text = "pris: ")
-        self.lager_label = tk.Label(add_menu_vframe, text = "lager: ")  
+        e_font  = font.nametofont("TkDefaultFont")
 
-        self.titel_label.pack(side = tk.TOP, anchor=tk.NW)
-        self.forfatter_label.pack(side = tk.TOP, anchor=tk.NW)
-        self.genre_label.pack(side = tk.TOP, anchor=tk.NW)
-        self.pris_label.pack(side = tk.TOP, anchor=tk.NW)
-        self.lager_label.pack(side = tk.TOP, anchor=tk.NW)
+        for thing, thing_text, thing_type in zip(self.data, self.data_text, self.data_type):
+            titel_label = tk.Label(add_menu_vframe, text = thing_text + ": ")  
+            titel_label.pack(side = tk.TOP, anchor=tk.NW)
 
-       
-        #add_menu.mainloop()
-        add_menu_vframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = tk.FALSE)
-        add_menu_hframe.pack(side=tk.LEFT, fill = tk.BOTH, expand = tk.FALSE)
-        
+            if book:
+                book = self.db.get_book(self._tree.item(self._tree.selection()[0])['text'])
+
+                attr = getattr(book, thing)
+                if attr == None:
+                    text = None
+                elif thing_type == list:
+                    text = ', '.join(attr)
+                else:
+                    text = attr
+
+            if label:
+                if len(str(text)) > 48:
+                    text = str(text)[:48] + "..."
+                entry = tk.Label(add_menu_hframe, text=text, anchor=tk.W)
+                entry.pack(side = tk.TOP, fill=tk.X, expand=True)
+            else:
+                if thing_type == list:
+                    example = "(f.eks. 'Hans, Jens Peter')"
+                elif thing_type == int:
+                    example = "(f.eks. '123')"
+                elif thing_type == decimal.Decimal:
+                    example = "(f.eks. '123.45' eller '123')"
+                else:
+                    example = "(f.eks. 'Fantasy')"
+
+                placeholder = f"Skriv {thing_text.lower()}"
+                placeholder_first_len = e_font.measure(placeholder)
+                space_len = e_font.measure(" ")
+                placeholder += f"{' ' * int(40 - placeholder_first_len/space_len)}{example}"
+
+                entry = EntryWithPlaceholder(add_menu_hframe, placeholder)
+                entry.validate(self._validate, thing_type)
+
+                if book:
+                    self.book = book
+                    entry.set(text)
+                    
+                entry.pack(side = tk.TOP, fill=tk.X, expand=True, pady = 1)
+
+            popup.entries.append(entry)
+                    
 
     def _delete_book(self):
         #delete from database
@@ -421,14 +495,11 @@ class App(tk.Tk):
         self._tree.redraw()
         pass
 
-    def _update_book(self):
-        pass
-
     def _sell_book(self):
         book = self.db.get_book(self._tree.item(self._tree.selection()[0])['text'])
         
         if 50 < len(book.title):
-            book.title = book.title[:70] + "..."
+            book.title = book.title[:80] + "..."
 
         if(0 < book.stock):
             PopUpText(f'Sælg bogen:\n"{book.title}"\nPris: {book.price}kr\nLager: {book.stock}', "Sælg", self._sell_book_accept)
@@ -441,7 +512,8 @@ class App(tk.Tk):
             quantity = 1
         )
         
-        book = self.db.sell_book(transaction)
+        self.db.sell_book(transaction)
+        self._saldo_label_amount.configure(text = self.db.get_saldo())
         return True
 
     # sort by coloumn callback when tree header is clicked, set sort_by optionmenu to the clicked coloumn

@@ -10,7 +10,7 @@ from os.path import exists
 
 @dataclass
 class MinBook:
-    title:              str
+    title:              str = None
     authors:            Optional[list[str]] = None
     group:              Optional[str] = None
     product_code:       Optional[int] = None
@@ -19,7 +19,7 @@ class MinBook:
 
 @dataclass
 class Book:
-    title:              str
+    title:              str = None
     price:              Optional[decimal.Decimal] = None
     stock:              Optional[int] = None
     age:                Optional[str] = None
@@ -89,8 +89,8 @@ class Transaction:
 class sort_by(Enum):
     product_code_desc = ("books.product_code",  0)
     product_code_asc =  ("books.product_code",  1)
-    group_desc =        ("group_.name",          0)
-    group_asc =         ("group_.name",          1)
+    group_desc =        ("groups.name",          0)
+    group_asc =         ("groups.name",          1)
     author_desc =       ("author.name",         0)
     author_asc =        ("author.name",         1)
     title_desc =        ("books.title",         0)
@@ -102,8 +102,8 @@ _SQL_SELECT_MINBOOK = """
 SELECT 
 books.id,
 books.title,
-group_concat(author.name),
-group_.name,
+GROUP_CONCAT(author.name),
+groups.name,
 books.product_code"""
 
 
@@ -115,7 +115,7 @@ books.dimensions,
 books.edition,
 editor.name,
 exam.name,
-group_.name,
+groups.name,
 books.image,
 imprint.name,
 books.isbn10,
@@ -135,7 +135,7 @@ books.stock"""
 
 
 _SQL_JOIN_MINBOOK = """
-LEFT JOIN group_ ON group_.id = books.group_id
+LEFT JOIN groups ON groups.id = books.group_id
 
 LEFT JOIN book_author ON books.id = book_author.book_id
 LEFT JOIN author ON book_author.author_id = author.id
@@ -181,7 +181,7 @@ WHERE """ + "\nAND ".join(
         enumerate([
             (_sql_instr_str, "books.title"),
             (_sql_instr_str, "author.name"),
-            (_sql_instr_str, "group_.name"),
+            (_sql_instr_str, "groups.name"),
             (_sql_instr_int, "books.product_code")], 
         start=1)]) + """
         
@@ -380,7 +380,7 @@ class Database(object):
                 ON UPDATE CASCADE
                 ON DELETE SET NULL,
             FOREIGN KEY (group_id)
-                REFERENCES group_ (id)
+                REFERENCES groups (id)
                 ON UPDATE CASCADE
                 ON DELETE SET NULL,
             FOREIGN KEY (imprint_id)
@@ -453,7 +453,7 @@ class Database(object):
             name TEXT NOT NULL UNIQUE
             )""")
             
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS group_(
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS groups(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE
             )""")
@@ -553,7 +553,7 @@ class Database(object):
                 book.edition,
                 self._insert_or_ignore("editor", "name", book.editor),
                 self._insert_or_ignore("exam", "name", book.exam),
-                self._insert_or_ignore("group_", "name", book.group),
+                self._insert_or_ignore("groups", "name", book.group),
                 book.image,
                 self._insert_or_ignore("imprint", "name", book.imprint),
                 book.isbn10,    
@@ -660,7 +660,7 @@ class Database(object):
             book.edition,
             self._insert_or_ignore("editor", "name", book.editor),
             self._insert_or_ignore("exam", "name", book.exam),
-            self._insert_or_ignore("group_", "name", book.group),
+            self._insert_or_ignore("groups", "name", book.group),
             book.image,
             self._insert_or_ignore("imprint", "name", book.imprint),
             book.isbn10,    
@@ -709,6 +709,10 @@ class Database(object):
 
         self.con.commit()
 
+
+    def get_saldo(self) -> decimal.Decimal():
+        self.cur.execute("""SELECT SUM(price*quantity) FROM transactions""")
+        return self._int_to_decimal(self.cur.fetchone()[0])
 
     # delete book
     def delete_books(self, ids: list[int]) -> None:
@@ -762,3 +766,4 @@ if __name__ == "__main__":
 
         book = db.get_book(2)
         print(book)
+        print(db.get_saldo())
